@@ -1,6 +1,8 @@
 # Asuka_InventoryPlugin
 **Asuka_InventoryPlugin** is a modular inventory system built for Unreal Engine 5, designed to support complex item management in RPGs and immersive games. Inspired by classic inventory mechanics and modern extensibility, this plugin offers a flexible foundation for developers seeking to integrate robust inventory features into their UE5 projects.
 
+![InventoryPluginDemo](https://github.com/user-attachments/assets/f12fc092-387c-4712-8a3a-203a0a5f240f)
+
 ## ✨ Features
 
 - **Grid-based inventory layout** with customizable slot sizes and item dimensions

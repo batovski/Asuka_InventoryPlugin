@@ -23,3 +23,7 @@
 2. Enable the plugin in your project settings
 3. Review the example assets and blueprints to understand usage
 4. Customize inventory behavior via C++ or Blueprint as needed
+
+## 🎓 Learning Reference
+
+This plugin was developed with insights gained from the [Unreal Engine 5 C++ Inventory Systems](https://www.udemy.com/course/unreal-engine-5-inventory-systems/) course by Stephen Ulibarri on Udemy.

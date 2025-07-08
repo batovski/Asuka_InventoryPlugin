@@ -38,6 +38,7 @@ void FInv_InventoryFastArray::PostReplicatedAdd(const TArrayView<int32> AddedInd
 
 	for (int32 Index : AddedIndices)
 	{
+		Entries[Index].Item->LoadStaticItemManifest();
 		InventoryComponent->OnItemAdded.Broadcast(Entries[Index].Item);
 	}
 }
@@ -52,7 +53,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.Item = ItemComponent->GetItemManifest().Manifest(OwnerActor);
-
+	NewEntry.Item->SetStaticItemManifestAssetId(ItemComponent->GetStaticItemManifestID());
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
 

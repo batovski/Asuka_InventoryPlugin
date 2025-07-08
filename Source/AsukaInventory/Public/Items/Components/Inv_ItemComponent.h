@@ -8,6 +8,8 @@
 #include "Inv_ItemComponent.generated.h"
 
 
+class UInv_ItemDataAsset;
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Blueprintable)
 class ASUKAINVENTORY_API UInv_ItemComponent : public UActorComponent
 {
@@ -16,11 +18,13 @@ class ASUKAINVENTORY_API UInv_ItemComponent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	UInv_ItemComponent();
+	void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void PickedUp();
 	void InitItemManifest(FInv_ItemManifest CopyOfManifest);
 	FString& GetPickupMessage();
-	FInv_ItemManifest GetItemManifest() const { return ItemManifest; }
+	FInv_ItemManifest GetItemManifest() const { return StaticItemManifest; }
+	const FPrimaryAssetId& GetStaticItemManifestID() const;
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Inventory")
@@ -28,7 +32,11 @@ protected:
 
 private:
 	UPROPERTY(Replicated, EditAnywhere, Category = "Inventory")
-	FInv_ItemManifest ItemManifest;
+	FPrimaryAssetId StaticItemManifestID;
+	/*UPROPERTY(Replicated, EditAnywhere, Category = "Inventory")
+	FInv_ItemManifest ItemManifest;*/
+	UPROPERTY()
+	FInv_ItemManifest StaticItemManifest;
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FString PickupMessage;

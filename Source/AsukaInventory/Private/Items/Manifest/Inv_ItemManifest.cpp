@@ -8,6 +8,7 @@
 #include "Items/Fragments/Inv_ItemFragment.h"
 #include "Widgets/Composite/Inv_CompositeBase.h"
 
+#pragma optimize("", off)
 UInv_InventoryItem* FInv_ItemManifest::Manifest(UObject* NewOuter)
 {
 	UInv_InventoryItem* Item = NewObject<UInv_InventoryItem>(NewOuter, UInv_InventoryItem::StaticClass());
@@ -19,7 +20,7 @@ UInv_InventoryItem* FInv_ItemManifest::Manifest(UObject* NewOuter)
 	ClearFragments();
 	return Item;
 }
-
+#pragma optimize("", on)
 void FInv_ItemManifest::SpawnPickUpActor(const UObject* WorldContextObject, const FVector& SpawnLocation,
 	const FRotator& SpawnRotation)
 {

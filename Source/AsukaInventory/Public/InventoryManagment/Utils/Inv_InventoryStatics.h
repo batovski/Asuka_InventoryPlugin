@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/AssetManager.h"
+#include "InventoryManagment/ItemData/Inv_ItemDataAsset.h"
 #include "Items/Components/Inv_ItemComponent.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Widgets/Utils/Inv_WidgetUtils.h"
@@ -39,6 +41,19 @@ public:
 	static UInv_HoverItem* GetHoverItem(const APlayerController* PlayerController);
 
 	static UInv_InventoryBase* GetInventoryWidget(const APlayerController* PlayerController);
+
+	static FInv_ItemManifest GetItemManifestFromID(const FPrimaryAssetId& ItemId)
+	{
+		UAssetManager& AssetManager = UAssetManager::Get();
+		UObject* Asset = AssetManager.GetPrimaryAssetObject(ItemId);
+		if (!IsValid(Asset))
+		{
+			auto Handle = AssetManager.LoadPrimaryAsset(ItemId);
+			Handle->WaitUntilComplete();
+			Asset = Handle->GetLoadedAsset();
+		}
+		return Cast<UInv_ItemDataAsset>(Asset)->ItemManifest;
+	}
 };
 
 template<typename T, typename FuncT>

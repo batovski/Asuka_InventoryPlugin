@@ -8,6 +8,7 @@
 #include "Inv_InventoryItem.generated.h"
 
 
+class UInv_ItemDataAsset;
 /**
  * 
  */
@@ -19,8 +20,10 @@ public:
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void SetItemManifest(const FInv_ItemManifest& NewManifest);
-	const FInv_ItemManifest& GetItemManifest() const { return ItemManifest.Get<FInv_ItemManifest>();}
-	FInv_ItemManifest& GetItemManifestMutable() { return ItemManifest.GetMutable<FInv_ItemManifest>();}
+	void SetStaticItemManifestAssetId(const FPrimaryAssetId& NewAssetId);
+	void LoadStaticItemManifest();
+	const FInv_ItemManifest& GetItemManifest() const;
+	FInv_ItemManifest& GetItemManifestMutable() { return StaticItemManifest.GetMutable<FInv_ItemManifest>();}
 
 	bool IsStackable() const;
 	bool IsConsumable() const;
@@ -28,10 +31,17 @@ public:
 
 	int32 GetTotalStackCount() const { return TotalStackCount; }
 	void SetTotalStackCount(int32 NewCount) { TotalStackCount = NewCount; }
+
 private:
 
 	UPROPERTY(VisibleAnywhere, meta = (BaseStuct = "/Scripts/AsukaInventory.Inv_ItemManifest"), Replicated)
 	FInstancedStruct ItemManifest;
+
+	UPROPERTY(VisibleAnywhere, meta = (BaseStuct = "/Scripts/AsukaInventory.Inv_ItemManifest"))
+	FInstancedStruct StaticItemManifest;
+
+	UPROPERTY(VisibleAnywhere, Replicated)
+	FPrimaryAssetId StaticItemManifestAssetId;
 
 	UPROPERTY(Replicated)
 	int32 TotalStackCount{ 0 };

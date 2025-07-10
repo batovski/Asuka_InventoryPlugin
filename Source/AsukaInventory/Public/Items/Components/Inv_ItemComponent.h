@@ -21,23 +21,44 @@ public:
 	void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void PickedUp();
-	void InitItemManifest(FInv_ItemManifest CopyOfManifest);
+	void InitItemManifest(const FPrimaryAssetId& NewItemManifestID);
+	void InitDynamicData(const TArray<TInstancedStruct<FInv_ItemFragment>>& NewDynamicFragments);
 	FString& GetPickupMessage();
 	FInv_ItemManifest GetItemManifest() const { return StaticItemManifest; }
 	const FPrimaryAssetId& GetStaticItemManifestID() const;
+
+	UFUNCTION()
+	void OnRep_DynamicFragments();
+
+	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
+	T* GetFragmentOfTypeMutable();
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Inventory")
 	void OnPickedUp();
 
 private:
+	void ApplyDynamicFragmentsToManifest();
 	UPROPERTY(Replicated, EditAnywhere, Category = "Inventory")
 	FPrimaryAssetId StaticItemManifestID;
-	/*UPROPERTY(Replicated, EditAnywhere, Category = "Inventory")
-	FInv_ItemManifest ItemManifest;*/
+	UPROPERTY(Replicated, ReplicatedUsing= OnRep_DynamicFragments)
+	TArray<TInstancedStruct<FInv_ItemFragment>> DynamicFragments;
 	UPROPERTY()
 	FInv_ItemManifest StaticItemManifest;
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FString PickupMessage;
 };
+
+template <typename T> requires std::derived_from<T, FInv_ItemFragment>
+T* UInv_ItemComponent::GetFragmentOfTypeMutable()
+{
+	for (TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicFragments)
+	{
+		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
+		{
+			return FragmentPtr;
+		}
+	}
+	return nullptr;
+}

@@ -62,7 +62,10 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(UInv_ItemCom
 	UInv_InventoryItem* FoundItem = InventoryList.FindFirstItemByType(ItemType);
 	if (!FoundItem) return;
 
-	FoundItem->SetTotalStackCount(FoundItem->GetTotalStackCount() + StackCount);
+	if(FInv_StackableFragment* StackFragment = FoundItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	{
+		StackFragment->SetStackCount(StackFragment->GetStackCount() + StackCount);
+	}
 
 	if(Remainder == 0)
 	{
@@ -78,7 +81,10 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(UInv_ItemCom
 void UInv_InventoryComponent::Server_AddNewItem_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount)
 {
 	UInv_InventoryItem* NewItem = InventoryList.AddEntry(ItemComponent);
-	NewItem->SetTotalStackCount(StackCount);
+	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	{
+		StackFragment->SetStackCount(StackCount);
+	}
 
 	if(GetOwner()->GetNetMode() == NM_ListenServer || GetOwner()->GetNetMode() == NM_Standalone)
 	{
@@ -91,16 +97,19 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(UInv_ItemComponen
 
 void UInv_InventoryComponent::Server_DropItem_Implementation(UInv_InventoryItem* Item, int32 StackCount)
 {
-	const int32 NewStackCount = Item->GetTotalStackCount() - StackCount;
-	if(NewStackCount <= 0)
+	if (FInv_StackableFragment* StackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
 	{
-		// Remove the item from the inventory
-		InventoryList.RemoveEntry(Item);
-		//OnItemRemoved.Broadcast(Item);
-	}
-	else
-	{
-		Item->SetTotalStackCount(NewStackCount);
+		const int32 NewStackCount = StackFragment->GetStackCount()- StackCount;
+		if (NewStackCount <= 0)
+		{
+			// Remove the item from the inventory
+			InventoryList.RemoveEntry(Item);
+			//OnItemRemoved.Broadcast(Item);
+		}
+		else
+		{
+			StackFragment->SetStackCount(NewStackCount);
+		}
 	}
 
 	SpawnDroppedItem(Item, StackCount);
@@ -117,24 +126,30 @@ void UInv_InventoryComponent::SpawnDroppedItem(UInv_InventoryItem* Item, int32 S
 	const FRotator SpawnRotation = FRotator::ZeroRotator;
 
 	FInv_ItemManifest& Manifest = Item->GetItemManifestMutable();
-	if(FInv_StackableFragment* StackableFragment = Manifest.GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	UInv_ItemComponent* NewItemComponent = Manifest.SpawnPickUpActor(this, SpawnLocation, SpawnRotation);
+	if (!NewItemComponent) return;
+	NewItemComponent->InitItemManifest(Item->GetStaticItemManifestAssetId()); //TODO : REDUNDANT
+	NewItemComponent->InitDynamicData(Item->GetDynamicItemFragmentsMutable());
+	if(FInv_StackableFragment* StackableFragment = NewItemComponent->GetFragmentOfTypeMutable<FInv_StackableFragment>())
 	{
 		StackableFragment->SetStackCount(StackCount);
 	}
-	Manifest.SpawnPickUpActor(this, SpawnLocation, SpawnRotation);
 }
 
 void UInv_InventoryComponent::Server_ConsumeItem_Implementation(UInv_InventoryItem* Item)
 {
-	const int32 NewStackCount = Item->GetTotalStackCount() - 1;
-	if(NewStackCount <= 0)
+	if (FInv_StackableFragment* StackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
 	{
-		// Remove the item from the inventory
-		InventoryList.RemoveEntry(Item);
-	}
-	else
-	{
-		Item->SetTotalStackCount(NewStackCount);
+		const int32 NewStackCount = StackFragment->GetStackCount() - 1;
+		if (NewStackCount <= 0)
+		{
+			// Remove the item from the inventory
+			InventoryList.RemoveEntry(Item);
+		}
+		else
+		{
+			StackFragment->SetStackCount(NewStackCount);
+		}
 	}
 	if(FInv_ConsumableFragment* ConsumableFragment = Item->GetItemManifestMutable().GetFragmentOfTypeMutable<FInv_ConsumableFragment>())
 	{

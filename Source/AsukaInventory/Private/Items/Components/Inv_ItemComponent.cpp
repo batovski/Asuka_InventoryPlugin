@@ -4,6 +4,7 @@
 #include "Items/Components/Inv_ItemComponent.h"
 
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
+#include "Items/Fragments/Inv_ItemFragment.h"
 #include "Net/UnrealNetwork.h"
 
 UInv_ItemComponent::UInv_ItemComponent()
@@ -16,7 +17,7 @@ UInv_ItemComponent::UInv_ItemComponent()
 void UInv_ItemComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	if (StaticItemManifestID.IsValid())
+	if (StaticItemManifestID.IsValid() && StaticItemManifest.GetItemCategory() == EInv_ItemCategory::None)
 	{
 		StaticItemManifest = UInv_InventoryStatics::GetItemManifestFromID(StaticItemManifestID);
 		if(GetOwner())
@@ -27,8 +28,8 @@ void UInv_ItemComponent::BeginPlay()
 void UInv_ItemComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-//	DOREPLIFETIME(ThisClass, ItemManifest);
 	DOREPLIFETIME(ThisClass, StaticItemManifestID);
+	DOREPLIFETIME(ThisClass, DynamicFragments);
 }
 
 void UInv_ItemComponent::PickedUp()
@@ -37,9 +38,14 @@ void UInv_ItemComponent::PickedUp()
 	GetOwner()->Destroy();
 }
 
-void UInv_ItemComponent::InitItemManifest(FInv_ItemManifest CopyOfManifest)
+void UInv_ItemComponent::InitItemManifest(const FPrimaryAssetId& NewItemManifestID)
 {
-	StaticItemManifest = CopyOfManifest;
+	StaticItemManifestID = NewItemManifestID;
+}
+
+void UInv_ItemComponent::InitDynamicData(const TArray<TInstancedStruct<FInv_ItemFragment>>& NewDynamicFragments)
+{
+	DynamicFragments = NewDynamicFragments;
 }
 
 FString& UInv_ItemComponent::GetPickupMessage()
@@ -50,5 +56,30 @@ FString& UInv_ItemComponent::GetPickupMessage()
 const FPrimaryAssetId& UInv_ItemComponent::GetStaticItemManifestID() const
 {
 	return StaticItemManifestID;
+}
+void UInv_ItemComponent::OnRep_DynamicFragments()
+{
+	ApplyDynamicFragmentsToManifest();
+}
+
+void UInv_ItemComponent::ApplyDynamicFragmentsToManifest()
+{
+	if (StaticItemManifest.GetItemCategory() == EInv_ItemCategory::None)
+	{
+		StaticItemManifest = UInv_InventoryStatics::GetItemManifestFromID(StaticItemManifestID);
+		if (GetOwner())
+			StaticItemManifest.SetPickupActorClass(GetOwner()->GetClass());
+	}
+	TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments = StaticItemManifest.GetFragmentsMutable();
+	for (TInstancedStruct<FInv_ItemFragment>& DynamicFragment : DynamicFragments)
+	{
+		for (TInstancedStruct<FInv_ItemFragment>& StaticItemFragment : StaticFragments)
+		{
+			if (StaticItemFragment.Get().IsDynamicFragment() && StaticItemFragment.Get().GetFragmentTag().MatchesTagExact(DynamicFragment.Get().GetFragmentTag()))
+			{
+				StaticItemFragment = DynamicFragment;
+			}
+		}
+	}
 }
 

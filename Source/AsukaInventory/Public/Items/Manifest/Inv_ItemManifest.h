@@ -13,6 +13,7 @@
  * Necessary Data for creating a new Inventory Item
  */
 
+class UInv_ItemComponent;
 class UInv_CompositeBase;
 struct FInv_ItemFragment;
 
@@ -26,10 +27,10 @@ struct ASUKAINVENTORY_API FInv_ItemManifest
 
 	void SetPickupActorClass(const TSubclassOf<AActor>& NewActorClass) { PickupActorClass = NewActorClass; }
 
-	void SpawnPickUpActor(const UObject* WorldContextObject, const FVector& SpawnLocation, const FRotator& SpawnRotation);
+	UInv_ItemComponent* SpawnPickUpActor(const UObject* WorldContextObject, const FVector& SpawnLocation, const FRotator& SpawnRotation);
 
 	void AssimilateInventoryFragments(UInv_CompositeBase* Composite) const;
-	TArray< TInstancedStruct<FInv_ItemFragment>>& GetFragmentsMutable() { return Fragments; }
+	TArray<TInstancedStruct<FInv_ItemFragment>>& GetFragmentsMutable() { return StaticFragments; }
 
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
 	TArray<const T*> GetAllFragmentsOfType() const;
@@ -49,7 +50,7 @@ private:
 	void ClearFragments();
 
 	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (ExcludeBaseStruct))
-	TArray<TInstancedStruct<FInv_ItemFragment>> Fragments;
+	TArray<TInstancedStruct<FInv_ItemFragment>> StaticFragments;
 
 	UPROPERTY(EditAnywhere, Category= "Inventory")
 	EInv_ItemCategory ItemCategory{ EInv_ItemCategory::None };
@@ -59,13 +60,14 @@ private:
 
 	UPROPERTY()
 	TSubclassOf<AActor> PickupActorClass;
+
 };
 
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>
 TArray<const T*> FInv_ItemManifest::GetAllFragmentsOfType() const
 {
 	TArray<const T*> FragmentsOfType;
-	for(const TInstancedStruct<FInv_ItemFragment>& Fragment : Fragments)
+	for(const TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
 	{
 		if(const T* FragmentPtr = Fragment.GetPtr<T>())
 		{
@@ -79,7 +81,7 @@ template<typename T>
 requires std::derived_from<T, FInv_ItemFragment>
 const T* FInv_ItemManifest::GetFragmentOfTypeWithTag(const FGameplayTag& FragmentType) const
 {
-	for(const TInstancedStruct<FInv_ItemFragment>& Fragment : Fragments)
+	for(const TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
 	{
 		if( const T* FragmentPtr = Fragment.GetPtr<T>())
 		{
@@ -93,7 +95,7 @@ const T* FInv_ItemManifest::GetFragmentOfTypeWithTag(const FGameplayTag& Fragmen
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>
 const T* FInv_ItemManifest::GetFragmentOfType() const
 {
-	for (const TInstancedStruct<FInv_ItemFragment>& Fragment : Fragments)
+	for (const TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
 	{
 		if (const T* FragmentPtr = Fragment.GetPtr<T>())
 		{
@@ -106,7 +108,7 @@ const T* FInv_ItemManifest::GetFragmentOfType() const
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>
 T* FInv_ItemManifest::GetFragmentOfTypeMutable()
 {
-	for (TInstancedStruct<FInv_ItemFragment>& Fragment : Fragments)
+	for (TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
 	{
 		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
 		{

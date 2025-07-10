@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Manifest/Inv_ItemManifest.h"
+#include "Items/Fragments/Inv_ItemFragment.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Inv_InventoryItem.generated.h"
 
@@ -19,33 +20,67 @@ class ASUKAINVENTORY_API UInv_InventoryItem : public UObject
 public:
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	void SetItemManifest(const FInv_ItemManifest& NewManifest);
+	void SetItemManifest(FInv_ItemManifest& NewManifest);
+	void SetDynamicItemFragments(const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments){ DynamicItemFragments = Fragments;}
 	void SetStaticItemManifestAssetId(const FPrimaryAssetId& NewAssetId);
+	const FPrimaryAssetId& GetStaticItemManifestAssetId() const { return StaticItemManifestAssetId; }
 	void LoadStaticItemManifest();
 	const FInv_ItemManifest& GetItemManifest() const;
 	FInv_ItemManifest& GetItemManifestMutable() { return StaticItemManifest.GetMutable<FInv_ItemManifest>();}
+
+	const TArray<TInstancedStruct<FInv_ItemFragment>>& GetDynamicItemFragmentsMutable() { return DynamicItemFragments; }
 
 	bool IsStackable() const;
 	bool IsConsumable() const;
 	bool IsEquippable() const;
 
-	int32 GetTotalStackCount() const { return TotalStackCount; }
-	void SetTotalStackCount(int32 NewCount) { TotalStackCount = NewCount; }
+	UFUNCTION()
+	void OnRep_DynamicItemFragments();
+
+
+	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
+	T* GetFragmentOfTypeMutable();
 
 private:
 
-	UPROPERTY(VisibleAnywhere, meta = (BaseStuct = "/Scripts/AsukaInventory.Inv_ItemManifest"), Replicated)
-	FInstancedStruct ItemManifest;
-
-	UPROPERTY(VisibleAnywhere, meta = (BaseStuct = "/Scripts/AsukaInventory.Inv_ItemManifest"))
-	FInstancedStruct StaticItemManifest;
+	UPROPERTY(meta = (BaseStuct = "/Scripts/AsukaInventory.FInv_DynamicItemFragment"), ReplicatedUsing = OnRep_DynamicItemFragments)
+	TArray<TInstancedStruct<FInv_ItemFragment>> DynamicItemFragments;
 
 	UPROPERTY(VisibleAnywhere, Replicated)
 	FPrimaryAssetId StaticItemManifestAssetId;
 
-	UPROPERTY(Replicated)
-	int32 TotalStackCount{ 0 };
+	UPROPERTY(meta = (BaseStuct = "/Scripts/AsukaInventory.Inv_ItemManifest"))
+	FInstancedStruct StaticItemManifest;
 };
+
+
+template <typename T> requires std::derived_from<T, FInv_ItemFragment>
+T* UInv_InventoryItem::GetFragmentOfTypeMutable()
+{
+	for (TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
+	{
+		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
+		{
+			return FragmentPtr;
+		}
+	}
+
+	auto& StaticFragments = GetItemManifestMutable().GetFragmentsMutable();
+	for (TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
+	{
+		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
+		{
+			if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>(); FragmentBasePtr->IsDynamicFragment())
+			{
+				TInstancedStruct<T> BaseStruct = TInstancedStruct<T>::Make(*FragmentPtr);
+;				TInstancedStruct<FInv_ItemFragment>& NewDynamicFragment = DynamicItemFragments.Add_GetRef(BaseStruct);
+				return NewDynamicFragment.GetMutablePtr<T>();
+			}
+			return FragmentPtr;
+		}
+	}
+	return nullptr;
+}
 
 template<typename FragmentType>
 const FragmentType* GetFragment(const UInv_InventoryItem* Item, const FGameplayTag& Tag)
@@ -55,3 +90,4 @@ const FragmentType* GetFragment(const UInv_InventoryItem* Item, const FGameplayT
 	const FInv_ItemManifest& Manifest = Item->GetItemManifest();
 	return Item->GetItemManifest().GetFragmentOfTypeWithTag<FragmentType>(Tag);
 }
+

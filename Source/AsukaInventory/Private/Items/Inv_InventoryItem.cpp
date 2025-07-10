@@ -10,14 +10,14 @@
 void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	UObject::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ThisClass, ItemManifest);
-	DOREPLIFETIME(ThisClass, TotalStackCount);
+	DOREPLIFETIME(ThisClass, DynamicItemFragments);
+	//DOREPLIFETIME(ThisClass, TotalStackCount);
 	DOREPLIFETIME(ThisClass, StaticItemManifestAssetId);
 }
 
-void UInv_InventoryItem::SetItemManifest(const FInv_ItemManifest& NewManifest)
-{
-	StaticItemManifest = FInstancedStruct::Make<FInv_ItemManifest>(NewManifest);
+void UInv_InventoryItem::SetItemManifest(FInv_ItemManifest& NewManifest)  
+{  
+    StaticItemManifest = FInstancedStruct::Make<FInv_ItemManifest>(NewManifest);  
 }
 
 void UInv_InventoryItem::SetStaticItemManifestAssetId(const FPrimaryAssetId& NewAssetId)
@@ -53,4 +53,19 @@ bool UInv_InventoryItem::IsEquippable() const
 {
 	const FInv_EquipmentFragment* EquipmentFragment = GetItemManifest().GetFragmentOfType<FInv_EquipmentFragment>();
 	return EquipmentFragment != nullptr;
+}
+
+void UInv_InventoryItem::OnRep_DynamicItemFragments()
+{
+	auto array = GetItemManifestMutable().GetFragmentsMutable();
+	for(const TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
+	{
+		for(auto& ItemFragment : array)
+		{
+			if(ItemFragment.Get().StaticStruct() == Fragment.Get().StaticStruct())
+			{
+				ItemFragment.InitializeAs(Fragment.Get());
+			}
+		}
+	}
 }

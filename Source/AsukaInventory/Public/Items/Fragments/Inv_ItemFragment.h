@@ -33,11 +33,14 @@ struct FInv_ItemFragment
 	FGameplayTag GetFragmentTag() const { return FragmentTag; }
 	void SetFragmentTag(FGameplayTag NewTag) { FragmentTag = NewTag; }
 
+	bool IsDynamicFragment() const { return bDynamicFragment; }
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (Categories="FragmentTags"))
 	FGameplayTag FragmentTag = FGameplayTag::EmptyTag;
-};
 
+	bool bDynamicFragment{ false }; // If true, this fragment is dynamic and can be modified at runtime will be synced with the item component.
+};
 
 USTRUCT(BlueprintType)
 struct FInv_GridFragment : public FInv_ItemFragment
@@ -61,7 +64,11 @@ USTRUCT(BlueprintType)
 struct FInv_StackableFragment : public FInv_ItemFragment
 {
 	GENERATED_BODY()
-	FInv_StackableFragment() { FragmentTag = FragmentTags::StackableFragment; }
+	FInv_StackableFragment()
+	{
+		bDynamicFragment = true; // This fragment is dynamic and can be modified at runtime
+		FragmentTag = FragmentTags::StackableFragment;
+	}
 	int32 GetMaxStackSize() const { return MaxStackSize; }
 	int32 GetStackCount() const { return StackCount; }
 	void SetStackCount(int32 Count) { StackCount = Count; }

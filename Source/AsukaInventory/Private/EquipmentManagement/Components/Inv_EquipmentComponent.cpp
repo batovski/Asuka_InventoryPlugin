@@ -92,7 +92,7 @@ void UInv_EquipmentComponent::OnItemEquipped(UInv_InventoryItem* EquippedItem)
 	if (!OwningPlayerController->HasAuthority()) return;
 
 	FInv_ItemManifest& ItemManifest = EquippedItem->GetItemManifestMutable();
-	FInv_EquipmentFragment* EquipmentFragment = ItemManifest.GetFragmentOfTypeMutable<FInv_EquipmentFragment>();
+	FInv_EquipmentFragment* EquipmentFragment = EquippedItem->GetFragmentOfTypeMutable<FInv_EquipmentFragment>();
 	if (!EquipmentFragment) return;
 
 	EquipmentFragment->OnEquip(OwningPlayerController.Get());
@@ -109,7 +109,7 @@ void UInv_EquipmentComponent::OnItemUnEquipped(UInv_InventoryItem* UnEquippedIte
 	if (!OwningPlayerController->HasAuthority()) return;
 
 	FInv_ItemManifest& ItemManifest = UnEquippedItem->GetItemManifestMutable();
-	FInv_EquipmentFragment* EquipmentFragment = ItemManifest.GetFragmentOfTypeMutable<FInv_EquipmentFragment>();
+	FInv_EquipmentFragment* EquipmentFragment = UnEquippedItem->GetFragmentOfTypeMutable<FInv_EquipmentFragment>();
 	if (!EquipmentFragment) return;
 
 	EquipmentFragment->OnUnEquip(OwningPlayerController.Get());

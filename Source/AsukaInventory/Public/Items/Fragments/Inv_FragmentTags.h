@@ -8,6 +8,7 @@ namespace FragmentTags
 	namespace DynamicFragmentTags
 	{
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(StackDynamicFragment)
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(PickUpActorFragment)
 	}
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GridFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(IconFragment)

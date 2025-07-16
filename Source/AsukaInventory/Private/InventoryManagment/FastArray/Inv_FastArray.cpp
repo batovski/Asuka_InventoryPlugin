@@ -52,8 +52,8 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 	if (!IsValid(IC)) return nullptr;
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
-	NewEntry.Item = ItemComponent->GetItemManifest().Manifest(OwnerActor);
-	NewEntry.Item->SetStaticItemManifestAssetId(ItemComponent->GetStaticItemManifestID());
+	NewEntry.Item = ItemComponent->CreateInventoryItemFromComponent(OwnerActor);
+
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
 

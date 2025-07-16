@@ -11,13 +11,12 @@ void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 {
 	UObject::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ThisClass, DynamicItemFragments);
-	//DOREPLIFETIME(ThisClass, TotalStackCount);
 	DOREPLIFETIME(ThisClass, StaticItemManifestAssetId);
 }
 
-void UInv_InventoryItem::SetItemManifest(FInv_ItemManifest& NewManifest)  
-{  
-    StaticItemManifest = FInstancedStruct::Make<FInv_ItemManifest>(NewManifest);  
+void UInv_InventoryItem::SetDynamicItemFragments(const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments)
+{
+	DynamicItemFragments = Fragments;
 }
 
 void UInv_InventoryItem::SetStaticItemManifestAssetId(const FPrimaryAssetId& NewAssetId)
@@ -31,6 +30,7 @@ void UInv_InventoryItem::LoadStaticItemManifest()
 	{
 		StaticItemManifest = FInstancedStruct::Make<FInv_ItemManifest>(UInv_InventoryStatics::GetItemManifestFromID(StaticItemManifestAssetId));
 	}
+	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(), DynamicItemFragments);
 }
 
 const FInv_ItemManifest& UInv_InventoryItem::GetItemManifest() const
@@ -55,17 +55,22 @@ bool UInv_InventoryItem::IsEquippable() const
 	return EquipmentFragment != nullptr;
 }
 
-void UInv_InventoryItem::OnRep_DynamicItemFragments()
+void UInv_InventoryItem::UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments, TArray <TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
 {
-	auto array = GetItemManifestMutable().GetFragmentsMutable();
-	for(const TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
+	//TODO:: OPTIMIZE THIS with hashmap if fragments are unique 
+	for (TInstancedStruct<FInv_ItemFragment>& DynamicFragment : DynamicFragments)
 	{
-		for(auto& ItemFragment : array)
+		for (TInstancedStruct<FInv_ItemFragment>& StaticItemFragment : StaticFragments)
 		{
-			if(ItemFragment.Get().StaticStruct() == Fragment.Get().StaticStruct())
+			if (StaticItemFragment.Get().IsDynamicFragment() && StaticItemFragment.Get().GetFragmentTag().MatchesTagExact(DynamicFragment.Get().GetFragmentTag()))
 			{
-				ItemFragment.InitializeAs(Fragment.Get());
+				StaticItemFragment = DynamicFragment;
 			}
 		}
 	}
+}
+
+void UInv_InventoryItem::OnRep_DynamicItemFragments()
+{
+	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(),DynamicItemFragments);
 }

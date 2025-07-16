@@ -60,6 +60,29 @@ private:
 	float GridPadding{ 0.f };
 };
 
+USTRUCT()
+struct FInv_PickUpFragment : public FInv_ItemFragment
+{
+	GENERATED_BODY()
+	FInv_PickUpFragment()
+	{
+		bDynamicFragment = true; // This fragment is dynamic and can be modified at runtime
+		FragmentTag = FragmentTags::DynamicFragmentTags::PickUpActorFragment;
+	}
+	FInv_PickUpFragment(const TSubclassOf<AActor>& NewPickUpClass)
+	{
+		bDynamicFragment = true; // This fragment is dynamic and can be modified at runtime
+		FragmentTag = FragmentTags::DynamicFragmentTags::PickUpActorFragment;
+		PickupActorClass = NewPickUpClass;
+	}
+	TSubclassOf<AActor> GetPickUpActorClass() const { return PickupActorClass; }
+	void SetPickUpActorClass(const TSubclassOf<AActor>& NewPickUpClass) { PickupActorClass = NewPickUpClass; }
+
+private:
+	UPROPERTY()
+	TSubclassOf<AActor> PickupActorClass;
+};
+
 USTRUCT(BlueprintType)
 struct FInv_StackableFragment : public FInv_ItemFragment
 {

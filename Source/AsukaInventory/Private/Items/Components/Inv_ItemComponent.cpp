@@ -4,6 +4,7 @@
 #include "Items/Components/Inv_ItemComponent.h"
 
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
+#include "Items/Inv_InventoryItem.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
 #include "Net/UnrealNetwork.h"
 
@@ -20,8 +21,6 @@ void UInv_ItemComponent::BeginPlay()
 	if (StaticItemManifestID.IsValid() && StaticItemManifest.GetItemCategory() == EInv_ItemCategory::None)
 	{
 		StaticItemManifest = UInv_InventoryStatics::GetItemManifestFromID(StaticItemManifestID);
-		if(GetOwner())
-			StaticItemManifest.SetPickupActorClass(GetOwner()->GetClass());
 	}
 }
 
@@ -48,6 +47,32 @@ void UInv_ItemComponent::InitDynamicData(const TArray<TInstancedStruct<FInv_Item
 	DynamicFragments = NewDynamicFragments;
 }
 
+UInv_InventoryItem* UInv_ItemComponent::CreateInventoryItemFromComponent(UObject* WorldContextObject)
+{
+	UInv_InventoryItem* NewItem = NewObject<UInv_InventoryItem>(WorldContextObject, UInv_InventoryItem::StaticClass());;
+	NewItem->SetStaticItemManifestAssetId(GetStaticItemManifestID());
+	NewItem->LoadStaticItemManifest();
+	DynamicFragments.Add(TInstancedStruct<FInv_PickUpFragment>::Make(FInv_PickUpFragment(GetOwner()->GetClass())));
+	NewItem->SetDynamicItemFragments(DynamicFragments);
+	NewItem->GetItemManifestMutable().Manifest();
+	return NewItem;
+}
+UInv_ItemComponent* UInv_ItemComponent::SpawnPickUpActor(const TSubclassOf<AActor>& ActorToSpawn, const UObject* WorldContextObject, const FVector& SpawnLocation,
+	const FRotator& SpawnRotation)
+{
+	if (!ActorToSpawn || !WorldContextObject) return nullptr;
+
+	AActor* SpawnedACtor = WorldContextObject->GetWorld()->SpawnActor<AActor>(ActorToSpawn, SpawnLocation, SpawnRotation);
+	if (!IsValid(SpawnedACtor)) return nullptr;
+
+	// Set the item manifest, on the spawned actor
+
+	UInv_ItemComponent* ItemComponent = SpawnedACtor->FindComponentByClass<UInv_ItemComponent>();
+	check(ItemComponent);
+
+	return ItemComponent;
+}
+
 FString& UInv_ItemComponent::GetPickupMessage()
 {
 	return PickupMessage;
@@ -67,19 +92,7 @@ void UInv_ItemComponent::ApplyDynamicFragmentsToManifest()
 	if (StaticItemManifest.GetItemCategory() == EInv_ItemCategory::None)
 	{
 		StaticItemManifest = UInv_InventoryStatics::GetItemManifestFromID(StaticItemManifestID);
-		if (GetOwner())
-			StaticItemManifest.SetPickupActorClass(GetOwner()->GetClass());
 	}
-	TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments = StaticItemManifest.GetFragmentsMutable();
-	for (TInstancedStruct<FInv_ItemFragment>& DynamicFragment : DynamicFragments)
-	{
-		for (TInstancedStruct<FInv_ItemFragment>& StaticItemFragment : StaticFragments)
-		{
-			if (StaticItemFragment.Get().IsDynamicFragment() && StaticItemFragment.Get().GetFragmentTag().MatchesTagExact(DynamicFragment.Get().GetFragmentTag()))
-			{
-				StaticItemFragment = DynamicFragment;
-			}
-		}
-	}
+	UInv_InventoryItem::UpdateManifestData(StaticItemManifest.GetFragmentsMutable(), DynamicFragments);
 }
 

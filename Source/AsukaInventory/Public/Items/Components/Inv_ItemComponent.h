@@ -23,6 +23,10 @@ public:
 	void PickedUp();
 	void InitItemManifest(const FPrimaryAssetId& NewItemManifestID);
 	void InitDynamicData(const TArray<TInstancedStruct<FInv_ItemFragment>>& NewDynamicFragments);
+
+	static UInv_ItemComponent* SpawnPickUpActor(const TSubclassOf<AActor>& ActorToSpawn, const UObject* WorldContextObject, const FVector& SpawnLocation,
+		const FRotator& SpawnRotation);
+	UInv_InventoryItem* CreateInventoryItemFromComponent(UObject* WorldContextObject);
 	FString& GetPickupMessage();
 	FInv_ItemManifest GetItemManifest() const { return StaticItemManifest; }
 	const FPrimaryAssetId& GetStaticItemManifestID() const;
@@ -39,6 +43,7 @@ protected:
 
 private:
 	void ApplyDynamicFragmentsToManifest();
+
 	UPROPERTY(Replicated, EditAnywhere, Category = "Inventory")
 	FPrimaryAssetId StaticItemManifestID;
 	UPROPERTY(Replicated, ReplicatedUsing= OnRep_DynamicFragments)

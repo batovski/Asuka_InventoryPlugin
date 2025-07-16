@@ -71,7 +71,7 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(UInv_ItemCom
 	{
 		ItemComponent->PickedUp();
 	}
-	else if(FInv_StackableFragment* StackableFragment = ItemComponent->GetItemManifest().GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	else if(FInv_StackableFragment* StackableFragment = ItemComponent->GetFragmentOfTypeMutable<FInv_StackableFragment>())
 	{
 		// If the item is stackable, we can update the stack count
 		StackableFragment->SetStackCount(Remainder);
@@ -125,8 +125,9 @@ void UInv_InventoryComponent::SpawnDroppedItem(UInv_InventoryItem* Item, int32 S
 	SpawnLocation.Z += RelativeSpawnElevation;
 	const FRotator SpawnRotation = FRotator::ZeroRotator;
 
-	FInv_ItemManifest& Manifest = Item->GetItemManifestMutable();
-	UInv_ItemComponent* NewItemComponent = Manifest.SpawnPickUpActor(this, SpawnLocation, SpawnRotation);
+	FInv_PickUpFragment* PickUpFragment = Item->GetFragmentOfTypeMutable<FInv_PickUpFragment>();
+	if (!PickUpFragment) { return; }
+	UInv_ItemComponent* NewItemComponent = UInv_ItemComponent::SpawnPickUpActor(PickUpFragment->GetPickUpActorClass(),this, SpawnLocation, SpawnRotation);
 	if (!NewItemComponent) return;
 	NewItemComponent->InitItemManifest(Item->GetStaticItemManifestAssetId()); //TODO : REDUNDANT
 	NewItemComponent->InitDynamicData(Item->GetDynamicItemFragmentsMutable());
@@ -151,7 +152,7 @@ void UInv_InventoryComponent::Server_ConsumeItem_Implementation(UInv_InventoryIt
 			StackFragment->SetStackCount(NewStackCount);
 		}
 	}
-	if(FInv_ConsumableFragment* ConsumableFragment = Item->GetItemManifestMutable().GetFragmentOfTypeMutable<FInv_ConsumableFragment>())
+	if(FInv_ConsumableFragment* ConsumableFragment = Item->GetFragmentOfTypeMutable<FInv_ConsumableFragment>())
 	{
 		ConsumableFragment->OnConsume(OwningController.Get());
 	}

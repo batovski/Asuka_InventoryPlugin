@@ -20,17 +20,17 @@ struct FInv_ItemFragment;
 USTRUCT(BlueprintType)
 struct ASUKAINVENTORY_API FInv_ItemManifest
 {
+	friend class UInv_InventoryItem;
+	friend class UInv_ItemComponent;
+
 	GENERATED_BODY()
-	UInv_InventoryItem* Manifest(UObject* NewOuter);
+	void Manifest();
 	EInv_ItemCategory GetItemCategory() const { return ItemCategory; }
 	FGameplayTag GetItemType() const { return ItemType; }
 
-	void SetPickupActorClass(const TSubclassOf<AActor>& NewActorClass) { PickupActorClass = NewActorClass; }
-
-	UInv_ItemComponent* SpawnPickUpActor(const UObject* WorldContextObject, const FVector& SpawnLocation, const FRotator& SpawnRotation);
-
 	void AssimilateInventoryFragments(UInv_CompositeBase* Composite) const;
-	TArray<TInstancedStruct<FInv_ItemFragment>>& GetFragmentsMutable() { return StaticFragments; }
+
+	void AddStaticFragment(const TInstancedStruct<FInv_ItemFragment>& Fragment) { StaticFragments.Add(Fragment);}
 
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
 	TArray<const T*> GetAllFragmentsOfType() const;
@@ -41,13 +41,12 @@ struct ASUKAINVENTORY_API FInv_ItemManifest
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
 	const T* GetFragmentOfType() const;
 
-	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
-	T* GetFragmentOfTypeMutable();
-
 
 private:
+	TArray<TInstancedStruct<FInv_ItemFragment>>& GetFragmentsMutable() { return StaticFragments; }
 
-	void ClearFragments();
+	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
+	T* GetFragmentOfTypeMutable();
 
 	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (ExcludeBaseStruct))
 	TArray<TInstancedStruct<FInv_ItemFragment>> StaticFragments;
@@ -57,10 +56,6 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (Categories = "GameItems"))
 	FGameplayTag ItemType;
-
-	UPROPERTY()
-	TSubclassOf<AActor> PickupActorClass;
-
 };
 
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>

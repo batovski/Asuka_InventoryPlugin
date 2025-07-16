@@ -20,8 +20,7 @@ class ASUKAINVENTORY_API UInv_InventoryItem : public UObject
 public:
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	void SetItemManifest(FInv_ItemManifest& NewManifest);
-	void SetDynamicItemFragments(const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments){ DynamicItemFragments = Fragments;}
+	void SetDynamicItemFragments(const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments);
 	void SetStaticItemManifestAssetId(const FPrimaryAssetId& NewAssetId);
 	const FPrimaryAssetId& GetStaticItemManifestAssetId() const { return StaticItemManifestAssetId; }
 	void LoadStaticItemManifest();
@@ -33,6 +32,7 @@ public:
 	bool IsStackable() const;
 	bool IsConsumable() const;
 	bool IsEquippable() const;
+	static void UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments, TArray <TInstancedStruct<FInv_ItemFragment>>& DynamicFragments);
 
 	UFUNCTION()
 	void OnRep_DynamicItemFragments();
@@ -44,7 +44,7 @@ public:
 private:
 
 	UPROPERTY(meta = (BaseStuct = "/Scripts/AsukaInventory.FInv_DynamicItemFragment"), ReplicatedUsing = OnRep_DynamicItemFragments)
-	TArray<TInstancedStruct<FInv_ItemFragment>> DynamicItemFragments;
+	TArray<TInstancedStruct<FInv_ItemFragment>> DynamicItemFragments {};
 
 	UPROPERTY(VisibleAnywhere, Replicated)
 	FPrimaryAssetId StaticItemManifestAssetId;

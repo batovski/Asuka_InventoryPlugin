@@ -8,6 +8,7 @@ namespace FragmentTags
 	namespace DynamicFragmentTags
 	{
 		UE_DEFINE_GAMEPLAY_TAG(StackDynamicFragment, "FragmentTags.StackDynamicFragment")
+		UE_DEFINE_GAMEPLAY_TAG(PickUpActorFragment, "FragmentTags.PickUpActorFragment")
 	}
 
 	UE_DEFINE_GAMEPLAY_TAG(GridFragment, "FragmentTags.GridFragment")

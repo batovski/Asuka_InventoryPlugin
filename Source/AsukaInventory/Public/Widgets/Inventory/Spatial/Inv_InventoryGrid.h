@@ -34,11 +34,14 @@ class ASUKAINVENTORY_API UInv_InventoryGrid : public UUserWidget
 {
 	GENERATED_BODY()
 public:
+
+	UFUNCTION()
+	virtual void AddItem(UInv_InventoryItem* Item);
+
 	virtual void NativeOnInitialized() override;
 	EInv_ItemCategory GetItemCategory() const { return ItemCategory; }
 	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_ItemComponent* ItemComponent);
-	UFUNCTION()
-	void AddItem(UInv_InventoryItem* Item);
+	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_InventoryItem* Item, const int32 StackAmountOverride = -1);
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	void ShowCursor();
@@ -46,7 +49,7 @@ public:
 
 	void SetOwningCanvasPanel(UCanvasPanel* OwningPanel);
 
-	void DropHoverItem();
+	virtual void DropHoverItem();
 	bool HasHoverItem() const;
 
 	void AssignHoverItem(UInv_InventoryItem* InventoryItem);
@@ -63,13 +66,28 @@ public:
 	FHoverItemUnAssigned OnHoverItemUnAssigned;
 	FItemEquipped OnItemEquipped;
 
+protected:
+
+	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest, const int32 StackAmountOverride = -1);
+	void AddItemToIndices(const FInv_SlotAvailabilityResult& Result, UInv_InventoryItem* NewItem);
+
+	void RemoveItemFromGrid(UInv_InventoryItem* Item, const int32 GridIndex);
+	void RemoveAllItemFromGrid();
+
+	UInv_SlottedItem* FindSlottedItem(const UInv_InventoryItem* Item) const;
+
+	virtual bool IsItemCategoryValidForGrid(const EInv_ItemCategory Category) const { return Category == ItemCategory; }
+
+	UFUNCTION()
+	virtual	void OnInventoryMenuToggled(bool IsOpen);
+	UFUNCTION()
+	void AddStacks(const FInv_SlotAvailabilityResult& Result);
+
+	TWeakObjectPtr<UInv_InventoryComponent> InventoryComponent;
+
 private:
 
 	void ConstructGrid();
-
-	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_InventoryItem* Item, const int32 StackAmountOverride = -1);
-	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest, const int32 StackAmountOverride = -1);
-	void AddItemToIndices(const FInv_SlotAvailabilityResult& Result, UInv_InventoryItem* NewItem);
 	bool MatchesCategory(const UInv_InventoryItem* Item) const;
 	FVector2D GetDrawSize(const FInv_GridFragment* GridFragment) const;
 	void SetSlottedItemImage(const FInv_GridFragment* GridFragment, const FInv_ImageFragment* ImageFragment,
@@ -101,8 +119,6 @@ private:
 	void AssignHoverItem(UInv_InventoryItem* InventoryItem, const int32 GridIndex, const int32 PreviousGridIndex);
 	void PutHoverItemBack();
 
-	void RemoveItemFromGrid(UInv_InventoryItem* Item, const int32 GridIndex);
-
 	void UpdateTileParameters(const FVector2D& CanvasPos, const FVector2D& MousePos);
 	FIntPoint CalculateHoveredCoordinates(const FVector2D& CanvasPos, const FVector2D& MousePos) const;
 	EInv_TileQuadrant CalculateTileQuadrant(const FVector2D& CanvasPos, const FVector2D& MousePos) const;
@@ -132,8 +148,8 @@ private:
 
 	void CreateItemPopUp(const int32 GridIndex);
 
-	UFUNCTION()
-	void AddStacks(const FInv_SlotAvailabilityResult& Result);
+	bool IsItemPresentedAsSlottedItem(const UInv_InventoryItem* Item) const;
+
 	UFUNCTION()
 	void OnSlottedItemClicked(int32 GridIndex, const FPointerEvent& MouseEvent);
 
@@ -154,15 +170,13 @@ private:
 	void OnPopUpMenuConsume(int32 Index);
 	UFUNCTION()
 	void OnPopUpMenuEquip(int32 Index);
-	UFUNCTION()
-	void OnInventoryMenuToggled(bool IsOpen);
 
+	UPROPERTY()
+	TArray<TObjectPtr<UInv_GridSlot>> GridSlots;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Inventory")
 	EInv_ItemCategory ItemCategory;
 
-	UPROPERTY()
-	TArray<TObjectPtr<UInv_GridSlot>> GridSlots;
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	TSubclassOf<UInv_GridSlot> GridSlotClass;
@@ -187,9 +201,6 @@ private:
 	TObjectPtr<UCanvasPanel> CanvasPanel;
 
 	UPROPERTY()
-	TObjectPtr<UInv_HoverItem> HoverItem;
-
-	UPROPERTY()
 	TObjectPtr<UUserWidget> VisibleCursorWidget;
 	UPROPERTY()
 	TObjectPtr<UUserWidget> HiddenCursorWidget;
@@ -212,7 +223,6 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FVector2D ItemPopUpOffset;
 
-	TWeakObjectPtr<UInv_InventoryComponent> InventoryComponent;
 	TWeakObjectPtr <UCanvasPanel> OwningCanvasPanel;
 
 	FInv_TileParameters TileParameters;
@@ -223,4 +233,6 @@ private:
 	bool bLastMouseWithinCanvas;
 	int32 LastHighlightIndex;
 	FIntPoint LastHighlightDimensions;
+
+	int32 LastClickedGridIndex{ INDEX_NONE };
 };

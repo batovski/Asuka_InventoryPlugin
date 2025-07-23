@@ -1,6 +1,7 @@
 
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 
+#include "Inventorymanagment/FastArray/Inv_FastArray.h"
 #include "Items/Inv_InventoryItem.h"
 #include "Items/Components/Inv_ItemComponent.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
@@ -23,7 +24,13 @@ void UInv_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME(ThisClass, InventoryList);
 }
 
-void UInv_InventoryComponent::TryAddItem(UInv_ItemComponent* ItemComponent)
+void UInv_InventoryComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	ConstructInventory();
+}
+
+void UInv_InventoryComponent::TryAddItemByComponent(UInv_ItemComponent* ItemComponent)
 {
 	FInv_SlotAvailabilityResult Result = InventoryMenu->HasRoomForItem(ItemComponent);
 	UInv_InventoryItem* FoundItem = InventoryList.FindFirstItemByType(ItemComponent->GetItemManifest().GetItemType());
@@ -39,24 +46,65 @@ void UInv_InventoryComponent::TryAddItem(UInv_ItemComponent* ItemComponent)
 	{
 		OnStackChange.Broadcast(Result);
 		// Add stacks to an item that already exists in the inventory
-		Server_AddStacksToItem(ItemComponent, Result.TotalRoomToFill, Result.Remainder);
+		Server_AddStacksToItemByComponent(ItemComponent, Result.TotalRoomToFill, Result.Remainder);
 	}
 	else if(Result.TotalRoomToFill > 0)
 	{
 		// This item is new, add it to the inventory
-		Server_AddNewItem(ItemComponent, Result.bStackable ? Result.TotalRoomToFill : 0);
+		Server_AddNewItemByComponent(ItemComponent, Result.bStackable ? Result.TotalRoomToFill : 0);
 	}
 }
 
-// Called when the game starts
-void UInv_InventoryComponent::BeginPlay()
+void UInv_InventoryComponent::TryAddItemToInventory(TScriptInterface<IInv_ItemListInterface> SourceInventory, TScriptInterface <IInv_ItemListInterface> TargetInventory,
+	UInv_InventoryItem* Item, int32 StackCount, const EInv_ItemCategory GridCategory)
 {
-	Super::BeginPlay();
-	ConstructInventory();
+	FInv_SlotAvailabilityResult Result = InventoryMenu->HasRoomForItem(Item, StackCount, GridCategory);
+	UInv_InventoryItem* FoundItem = Execute_FindFirstItemByType(TargetInventory.GetObject(),Item->GetItemManifest().GetItemType());
+	Result.Item = FoundItem;
+
+	if (Result.TotalRoomToFill == 0)
+	{
+		NoRoomInInventory.Broadcast();
+		return;
+	}
+
+	if (Result.Item.IsValid() && Result.bStackable)
+	{
+		// OnStackChange.Broadcast(Result); TODO::Need to call this on target inventory
+		// Add stacks to an item that already exists in the inventory
+		Server_AddStacksToItem(SourceInventory, TargetInventory, Item, Result.TotalRoomToFill, Result.Remainder);
+	}
+	else if (Result.TotalRoomToFill > 0)
+	{
+		// This item is new, add it to the inventory
+		Server_AddNewItem(SourceInventory, TargetInventory, Item, Result.bStackable ? Result.TotalRoomToFill : 0);
+	}
 }
 
-void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount,
-	int32 Remainder)
+void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount, int32 Remainder)
+{
+	const FGameplayTag ItemType = IsValid(Item) ? Item->GetItemManifest().GetItemType() : FGameplayTag::EmptyTag;
+	UInv_InventoryItem* FoundItem = Execute_FindFirstItemByType(TargetInventory.GetObject(), ItemType);
+	if (!FoundItem) return;
+
+	if (FInv_StackableFragment* StackFragment = FoundItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	{
+		StackFragment->SetStackCount(StackFragment->GetStackCount() + StackCount);
+	}
+
+	if (Remainder == 0)
+	{
+		Execute_RemoveItemFromList(SourceInventory.GetObject(), Item);
+	}
+	else if (FInv_StackableFragment* StackableFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	{
+		// If the item is stackable, we can update the stack count
+		StackableFragment->SetStackCount(Remainder);
+	}
+}
+
+void UInv_InventoryComponent::Server_AddStacksToItemByComponent_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount,
+                                                                    int32 Remainder)
 {
 	const FGameplayTag ItemType = IsValid(ItemComponent) ? ItemComponent->GetItemManifest().GetItemType() : FGameplayTag::EmptyTag;
 	UInv_InventoryItem* FoundItem = InventoryList.FindFirstItemByType(ItemType);
@@ -78,7 +126,7 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(UInv_ItemCom
 	}
 }
 
-void UInv_InventoryComponent::Server_AddNewItem_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount)
+void UInv_InventoryComponent::Server_AddNewItemByComponent_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount)
 {
 	UInv_InventoryItem* NewItem = InventoryList.AddEntry(ItemComponent);
 	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
@@ -94,22 +142,64 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(UInv_ItemComponen
 	ItemComponent->PickedUp();
 }
 
+void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount)
+{
+	UInv_InventoryItem* NewItem = Execute_AddItemToList(TargetInventory.GetObject(),Item->GetStaticItemManifestAssetId());
+	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	{
+		StackFragment->SetStackCount(StackCount);
+	}
+
+	if (GetOwner()->GetNetMode() == NM_ListenServer || GetOwner()->GetNetMode() == NM_Standalone)
+	{
+		OnItemAdded.Broadcast(NewItem);
+	}
+	if (FInv_StackableFragment* OldItemStackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	{
+		if (OldItemStackFragment->GetStackCount() <= StackCount)
+			Execute_RemoveItemFromList(SourceInventory.GetObject(), Item);
+		else
+		{
+			OldItemStackFragment->SetStackCount(OldItemStackFragment->GetStackCount() - StackCount);
+		}
+	}
+	else
+	{
+		Execute_RemoveItemFromList(SourceInventory.GetObject(), Item);
+	}
+}
+
 
 void UInv_InventoryComponent::Server_DropItem_Implementation(UInv_InventoryItem* Item, int32 StackCount)
 {
+	int32 NewStackCount = 0;
 	if (FInv_StackableFragment* StackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
 	{
-		const int32 NewStackCount = StackFragment->GetStackCount()- StackCount;
-		if (NewStackCount <= 0)
-		{
-			// Remove the item from the inventory
-			InventoryList.RemoveEntry(Item);
-			//OnItemRemoved.Broadcast(Item);
-		}
-		else
-		{
-			StackFragment->SetStackCount(NewStackCount);
-		}
+		NewStackCount = StackFragment->GetStackCount()- StackCount;
+		StackFragment->SetStackCount(NewStackCount);
+	}
+	if (NewStackCount <= 0)
+	{
+		// Remove the item from the inventory
+		InventoryList.RemoveEntry(Item);
+	}
+
+	SpawnDroppedItem(Item, StackCount);
+}
+
+void UInv_InventoryComponent::Server_DropItemFromExternalInventory_Implementation(
+	const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item, int32 StackCount)
+{
+	int32 NewStackCount = 0;
+	if (FInv_StackableFragment* StackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	{
+		NewStackCount = StackFragment->GetStackCount() - StackCount;
+		StackFragment->SetStackCount(NewStackCount);
+	}
+	if (NewStackCount <= 0)
+	{
+		// Remove the item from the inventory
+		Execute_RemoveItemFromList(SourceInventory.GetObject(), Item);
 	}
 
 	SpawnDroppedItem(Item, StackCount);
@@ -135,6 +225,16 @@ void UInv_InventoryComponent::SpawnDroppedItem(UInv_InventoryItem* Item, int32 S
 	{
 		StackableFragment->SetStackCount(StackCount);
 	}
+}
+
+void UInv_InventoryComponent::RemoveItemFromList_Implementation(UInv_InventoryItem* Item)
+{
+	InventoryList.RemoveEntry(Item);
+}
+
+UInv_InventoryItem* UInv_InventoryComponent::AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID)
+{
+	return InventoryList.AddEntry(StaticItemManifestID);
 }
 
 void UInv_InventoryComponent::Server_ConsumeItem_Implementation(UInv_InventoryItem* Item)
@@ -170,6 +270,11 @@ void UInv_InventoryComponent::Multicast_EquipSlotClicked_Implementation(UInv_Inv
 	// TODO:: Equipment Component
 	OnItemEquipped.Broadcast(ItemToEquip);
 	OnItemUnEquipped.Broadcast(ItemToUnEquip);
+}
+
+const UInv_InventoryItem* UInv_InventoryComponent::FindInventoryItem(const FGameplayTag& ItemType) const
+{
+	return InventoryList.FindFirstItemByType(ItemType);
 }
 
 void UInv_InventoryComponent::ToggleInventoryMenu()

@@ -16,7 +16,7 @@ class APlayerController;
 /**
  * 
  */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FInv_ItemFragment
 {
 	GENERATED_BODY()
@@ -60,7 +60,7 @@ private:
 	float GridPadding{ 0.f };
 };
 
-USTRUCT()
+USTRUCT(meta = (HiddenByDefault))
 struct FInv_PickUpFragment : public FInv_ItemFragment
 {
 	GENERATED_BODY()
@@ -79,8 +79,8 @@ struct FInv_PickUpFragment : public FInv_ItemFragment
 	void SetPickUpActorClass(const TSubclassOf<AActor>& NewPickUpClass) { PickupActorClass = NewPickUpClass; }
 
 private:
-	UPROPERTY()
-	TSubclassOf<AActor> PickupActorClass;
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	TSubclassOf<AActor> PickupActorClass{ nullptr };
 };
 
 USTRUCT(BlueprintType)
@@ -103,7 +103,7 @@ private:
 	int32 StackCount{ 1 };
 };
 
-USTRUCT()
+USTRUCT(meta = (HiddenByDefault))
 struct FInv_InventoryItemFragmentAbstract : public FInv_ItemFragment
 {
 	GENERATED_BODY()

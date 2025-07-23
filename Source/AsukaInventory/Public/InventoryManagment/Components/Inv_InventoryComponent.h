@@ -5,9 +5,11 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "InventoryManagment/FastArray/Inv_FastArray.h"
+#include <Types/Inv_GridTypes.h>
 #include "Inv_InventoryComponent.generated.h"
 
 
+class UInv_ExternalInventoryComponent;
 struct FInv_SlotAvailabilityResult;
 class UInv_ItemComponent;
 class UInv_InventoryBase;
@@ -16,10 +18,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryItemChange, UInv_Inventory
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryStackChange, const FInv_SlotAvailabilityResult&, Result);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FItemEquipStatusChanges, UInv_InventoryItem*, Item);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryMenuToggled, bool, bIsOpen);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FInventoryItemGridChange, UInv_InventoryItem*, Item, int32, StackCount, EInv_ItemCategory, OldGridCategory, EInv_ItemCategory, NewGridCategory);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNoRoomInInventory);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Blueprintable )
-class ASUKAINVENTORY_API UInv_InventoryComponent : public UActorComponent
+class ASUKAINVENTORY_API UInv_InventoryComponent : public UActorComponent, public IInv_ItemListInterface
 {
 	GENERATED_BODY()
 
@@ -30,16 +33,23 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
-	void TryAddItem(UInv_ItemComponent* ItemComponent);
+	void TryAddItemByComponent(UInv_ItemComponent* ItemComponent);
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
+	void TryAddItemToInventory(TScriptInterface<IInv_ItemListInterface> SourceInventory, TScriptInterface <IInv_ItemListInterface> TargetInventor,
+		UInv_InventoryItem* Item, int32 StackCount, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None);
 
 	UFUNCTION(Server,Reliable)
-	void Server_AddNewItem(UInv_ItemComponent* ItemComponent, int32 StackCount);
+	void Server_AddNewItemByComponent(UInv_ItemComponent* ItemComponent, int32 StackCount);
 
 	UFUNCTION(Server, Reliable)
-	void Server_AddStacksToItem(UInv_ItemComponent* ItemComponent, int32 StackCount, int32 Remainder);
+	void Server_AddStacksToItemByComponent(UInv_ItemComponent* ItemComponent, int32 StackCount, int32 Remainder);
 
 	UFUNCTION(Server, Reliable)
 	void Server_DropItem(UInv_InventoryItem* Item, int32 StackCount);
+
+	UFUNCTION(Server, Reliable)
+	void Server_DropItemFromExternalInventory(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item, int32 StackCount);
 
 	UFUNCTION(Server, Reliable)
 	void Server_ConsumeItem(UInv_InventoryItem* Item);
@@ -49,13 +59,21 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_EquipSlotClicked(UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
 
+	const UInv_InventoryItem* FindInventoryItem(const FGameplayTag& ItemType) const;
+
 	void ToggleInventoryMenu();
+	void OpenInventoryMenu();
 
 	void AddRepSubObj(UObject* SubObj);
 
 	void SpawnDroppedItem(UInv_InventoryItem* Item, int32 StackCount);
 
 	UInv_InventoryBase* GetInventoryMenu() const { return InventoryMenu; }
+
+	// IInv_ItemListInterface interface:
+	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override { return InventoryList.FindFirstItemByType(ItemType); }
+	virtual void RemoveItemFromList_Implementation(UInv_InventoryItem* Item) override;
+	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID) override;
 
 	FInventoryItemChange OnItemAdded;
 	FInventoryItemChange OnItemRemoved;
@@ -64,14 +82,21 @@ public:
 	FItemEquipStatusChanges OnItemEquipped;
 	FItemEquipStatusChanges OnItemUnEquipped;
 	FInventoryMenuToggled OnInventoryMenuToggled;
+	FInventoryItemGridChange OnInventoryItemGridChange;
 
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
 private:
+
+	UFUNCTION(Server, Reliable)
+	void Server_AddNewItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount);
+
+	UFUNCTION(Server, Reliable)
+	void Server_AddStacksToItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount, int32 Remainder);
+
 	void ConstructInventory();
-	void OpenInventoryMenu();
 	void CloseInventoryMenu();
 
 	UPROPERTY(Replicated)

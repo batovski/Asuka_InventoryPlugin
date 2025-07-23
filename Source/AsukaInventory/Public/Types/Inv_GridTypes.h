@@ -14,6 +14,7 @@ enum class EInv_ItemCategory : uint8
 	Equippable,
 	Consumable,
 	Craftable,
+	External,
 	None
 };
 

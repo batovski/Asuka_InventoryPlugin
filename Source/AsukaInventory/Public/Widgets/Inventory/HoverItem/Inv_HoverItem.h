@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Blueprint/UserWidget.h"
+#include <Types/Inv_GridTypes.h>
 #include "Inv_HoverItem.generated.h"
 
+class UInv_InventoryGrid;
 struct FGameplayTag;
 class UTextBlock;
 class UInv_InventoryItem;
@@ -34,6 +36,12 @@ public:
 	void SetInventoryItem(UInv_InventoryItem* Item);
 	FIntPoint GetGridDimensions() const { return GridDimensions; }
 
+	void SetParentGridItemCategory(const EInv_ItemCategory Category) { ParentGridItemCategory = Category; }
+	EInv_ItemCategory GetParentGridItemCategory() const { return ParentGridItemCategory; }
+
+	void SetOwningGrid(UInv_InventoryGrid* Grid);
+	UInv_InventoryGrid* GetOwningGrid() const;
+
 private:
 
 	UPROPERTY(meta = (BindWidget))
@@ -47,4 +55,6 @@ private:
 	TWeakObjectPtr<UInv_InventoryItem> InventoryItem;
 	bool bIsStackable{ false };
 	int32 StackCount {0};
+	EInv_ItemCategory ParentGridItemCategory { EInv_ItemCategory::None};
+	TWeakObjectPtr<UInv_InventoryGrid> OwningGrid;
 };

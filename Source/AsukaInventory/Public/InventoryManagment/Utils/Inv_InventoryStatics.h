@@ -40,20 +40,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	static UInv_HoverItem* GetHoverItem(const APlayerController* PlayerController);
 
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	static FInstancedStruct GetFragmentFromItem(const UInv_InventoryItem* Item,
+		UPARAM(meta = (Categories = "FragmentTags"))
+		FGameplayTag ItemType,
+		 bool& IsFound);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	static const UInv_InventoryItem* GetInventoryItemFromPlayerController(const APlayerController* PlayerController,
+		UPARAM(meta = (Categories = "GameItems")) FGameplayTag ItemType);
+
 	static UInv_InventoryBase* GetInventoryWidget(const APlayerController* PlayerController);
 
-	static FInv_ItemManifest GetItemManifestFromID(const FPrimaryAssetId& ItemId)
-	{
-		UAssetManager& AssetManager = UAssetManager::Get();
-		UObject* Asset = AssetManager.GetPrimaryAssetObject(ItemId);
-		if (!IsValid(Asset))
-		{
-			auto Handle = AssetManager.LoadPrimaryAsset(ItemId);
-			Handle->WaitUntilComplete();
-			Asset = Handle->GetLoadedAsset();
-		}
-		return Cast<UInv_ItemDataAsset>(Asset)->ItemManifest;
-	}
+	static FInv_ItemManifest GetItemManifestFromID(const FPrimaryAssetId& ItemId);
+
+	static UInv_InventoryItem* CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject);
 };
 
 template<typename T, typename FuncT>

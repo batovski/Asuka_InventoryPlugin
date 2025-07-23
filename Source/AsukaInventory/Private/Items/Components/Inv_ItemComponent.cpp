@@ -52,7 +52,6 @@ UInv_InventoryItem* UInv_ItemComponent::CreateInventoryItemFromComponent(UObject
 	UInv_InventoryItem* NewItem = NewObject<UInv_InventoryItem>(WorldContextObject, UInv_InventoryItem::StaticClass());;
 	NewItem->SetStaticItemManifestAssetId(GetStaticItemManifestID());
 	NewItem->LoadStaticItemManifest();
-	DynamicFragments.Add(TInstancedStruct<FInv_PickUpFragment>::Make(FInv_PickUpFragment(GetOwner()->GetClass())));
 	NewItem->SetDynamicItemFragments(DynamicFragments);
 	NewItem->GetItemManifestMutable().Manifest();
 	return NewItem;

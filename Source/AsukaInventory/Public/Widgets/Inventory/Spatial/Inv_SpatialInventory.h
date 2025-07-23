@@ -6,6 +6,8 @@
 #include "Widgets/Inventory/Base/Inv_InventoryBase.h"
 #include "Inv_SpatialInventory.generated.h"
 
+class UInv_ExternalInventoryComponent;
+class UInv_LootInventoryGrid;
 class UInv_EquippedSlottedItem;
 struct FGameplayTag;
 class UInv_EquippedGridSlot;
@@ -23,6 +25,7 @@ class ASUKAINVENTORY_API UInv_SpatialInventory : public UInv_InventoryBase
 	GENERATED_BODY()
 public:
 	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_ItemComponent* ItemComponent) const override;
+	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride = -1, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None) const override;
 	virtual void NativeOnInitialized() override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
@@ -30,7 +33,11 @@ public:
 	virtual void OnItemUnhovered() override;
 	virtual bool HasHoverItem() const override;
 	virtual UInv_HoverItem* GetHoverItem() const override;
+	virtual void SetHoverItem(UInv_HoverItem* NewHoverItem) override;
 	virtual float GetTileSize() const override;
+
+	void InitLootGrid(UInv_ExternalInventoryComponent* ExternalInventoryComponent, const TArray<UInv_InventoryItem*>& LootList) const;
+
 private:
 
 	void DisableButton(UButton* Button) const;
@@ -76,6 +83,8 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UInv_InventoryGrid> Grid_Craftables;
 	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UInv_LootInventoryGrid> Grid_Loot;
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> CanvasPanel;
 
 	UPROPERTY(meta = (BindWidget))
@@ -96,6 +105,9 @@ private:
 
 	UPROPERTY()
 	TArray<TObjectPtr<UInv_EquippedGridSlot>> EquippedGridSlots;
+
+	UPROPERTY()
+	TObjectPtr<UInv_HoverItem> HoverItem;
 
 	FTimerHandle ItemDescriptionTimer;
 

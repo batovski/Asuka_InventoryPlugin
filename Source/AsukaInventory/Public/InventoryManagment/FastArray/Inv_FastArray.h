@@ -3,13 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
+#include "UObject/Interface.h"
 #include "Net/Serialization/FastArraySerializer.h"
 #include "Inv_FastArray.generated.h"
 
+class UInv_ExternalInventoryComponent;
 class UInv_ItemComponent;
 class UInv_InventoryComponent;
 class UInv_InventoryItem;
 struct FGameplayTag;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryFastArrayItemChange, UInv_InventoryItem*, Item);
 
 /**
  A single entry in the inventory array.
@@ -49,9 +54,13 @@ public:
 	}
 
 	UInv_InventoryItem* AddEntry(UInv_ItemComponent* ItemComponent);
-	UInv_InventoryItem* AddEntry(UInv_InventoryItem* Item);
+	UInv_InventoryItem* AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID);
+	UInv_InventoryItem* AddEntry(const FPrimaryAssetId& StaticItemManifestID);
 	void RemoveEntry(UInv_InventoryItem* Item);
 	UInv_InventoryItem* FindFirstItemByType(const FGameplayTag& ItemType) const;
+
+	FInventoryFastArrayItemChange OnItemAdded;
+	FInventoryFastArrayItemChange OnItemRemoved;
 
 private:
 	friend UInv_InventoryComponent;
@@ -69,4 +78,23 @@ struct TStructOpsTypeTraits<FInv_InventoryFastArray> : TStructOpsTypeTraitsBase2
 	{
 		WithNetDeltaSerializer = true
 	};
+};
+
+UINTERFACE(MinimalAPI)
+class UInv_ItemListInterface : public UInterface
+{
+	GENERATED_BODY()
+};
+
+class IInv_ItemListInterface
+{
+	GENERATED_BODY()
+
+public:
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
+	UInv_InventoryItem* FindFirstItemByType(const FGameplayTag& ItemType) const;
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
+	void RemoveItemFromList(UInv_InventoryItem* Item);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
+	UInv_InventoryItem* AddItemToList(const FPrimaryAssetId& StaticItemManifestID);
 };

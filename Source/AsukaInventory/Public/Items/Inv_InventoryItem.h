@@ -43,13 +43,13 @@ public:
 
 private:
 
-	UPROPERTY(meta = (BaseStuct = "/Scripts/AsukaInventory.FInv_DynamicItemFragment"), ReplicatedUsing = OnRep_DynamicItemFragments)
+	UPROPERTY(meta = (BaseStuct = "/Script/AsukaInventory.FInv_DynamicItemFragment"), ReplicatedUsing = OnRep_DynamicItemFragments)
 	TArray<TInstancedStruct<FInv_ItemFragment>> DynamicItemFragments {};
 
 	UPROPERTY(VisibleAnywhere, Replicated)
 	FPrimaryAssetId StaticItemManifestAssetId;
 
-	UPROPERTY(meta = (BaseStuct = "/Scripts/AsukaInventory.Inv_ItemManifest"))
+	UPROPERTY(meta = (BaseStuct = "/Script/AsukaInventory.Inv_ItemManifest"))
 	FInstancedStruct StaticItemManifest;
 };
 

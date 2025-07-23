@@ -28,6 +28,8 @@ struct ASUKAINVENTORY_API FInv_ItemManifest
 	EInv_ItemCategory GetItemCategory() const { return ItemCategory; }
 	FGameplayTag GetItemType() const { return ItemType; }
 
+	const TArray<TInstancedStruct<FInv_ItemFragment>>& GetFragments() const { return StaticFragments; }
+
 	void AssimilateInventoryFragments(UInv_CompositeBase* Composite) const;
 
 	void AddStaticFragment(const TInstancedStruct<FInv_ItemFragment>& Fragment) { StaticFragments.Add(Fragment);}
@@ -40,7 +42,6 @@ struct ASUKAINVENTORY_API FInv_ItemManifest
 
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
 	const T* GetFragmentOfType() const;
-
 
 private:
 	TArray<TInstancedStruct<FInv_ItemFragment>>& GetFragmentsMutable() { return StaticFragments; }

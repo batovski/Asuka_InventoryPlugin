@@ -5,6 +5,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "InventoryManagment/Components/Inv_ExternalInventoryComponent.h"
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "Items/Components/Inv_ItemComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -61,9 +62,15 @@ void AInv_PlayerControllerBase::PrimaryInteract()
 	if (!ThisActor.IsValid()) return;
 
 	UInv_ItemComponent* ItemComp = ThisActor->FindComponentByClass<UInv_ItemComponent>();
-	if (!IsValid(ItemComp) || !InventoryComponent.IsValid()) return;
-
-	InventoryComponent->TryAddItem(ItemComp);
+	if (IsValid(ItemComp) && InventoryComponent.IsValid())
+	{
+		InventoryComponent->TryAddItemByComponent(ItemComp);
+	}
+	UInv_ExternalInventoryComponent* ItemsContainer = ThisActor->FindComponentByClass<UInv_ExternalInventoryComponent>();
+	if(IsValid(ItemsContainer))
+	{
+		ItemsContainer->OpenItemsContainer(this);
+	}
 }
 
 void AInv_PlayerControllerBase::CreateHUDWidget()
@@ -102,22 +109,20 @@ void AInv_PlayerControllerBase::TraceForItem()
 
 	if (ThisActor.IsValid())
 	{
-		/*if (UActorComponent* Highlightable = ThisActor->FindComponentByInterface(UInv_Highlightable::StaticClass()); IsValid(Highlightable))
-		{
-			IInv_Highlightable::Execute_Highlight(Highlightable);
-		}*/
-
 		UInv_ItemComponent* ItemComponent = ThisActor->FindComponentByClass<UInv_ItemComponent>();
-		if (!IsValid(ItemComponent)) return;
+		UInv_ExternalInventoryComponent* ItemContainerComponent = ThisActor->FindComponentByClass<UInv_ExternalInventoryComponent>();
 
-		if (IsValid(HUDWidget)) HUDWidget->ShowPickupMessage(ItemComponent->GetPickupMessage());
+		// TODO: Could be refactored to Interface call
+		if (IsValid(HUDWidget))
+		{
+			if(IsValid(ItemComponent))
+				HUDWidget->ShowPickupMessage(ItemComponent->GetPickupMessage());
+			if(IsValid(ItemContainerComponent))
+				HUDWidget->ShowPickupMessage(ItemContainerComponent->GetPickupMessage());
+		}
 	}
 
 	if (LastActor.IsValid())
 	{
-		/*if (UActorComponent* Highlightable = LastActor->FindComponentByInterface(UInv_Highlightable::StaticClass()); IsValid(Highlightable))
-		{
-			IInv_Highlightable::Execute_UnHighlight(Highlightable);
-		}*/
 	}
 }

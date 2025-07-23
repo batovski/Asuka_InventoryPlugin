@@ -2,8 +2,11 @@
 
 
 #include "InventoryManagment/FastArray/Inv_FastArray.h"
+
+#include "InventoryManagment/Components/Inv_ExternalInventoryComponent.h"
 #include "Items/Inv_InventoryItem.h"
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
+#include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 #include "Items/Components/Inv_ItemComponent.h"
 
 TArray<UInv_InventoryItem*> FInv_InventoryFastArray::GetAllItems() const
@@ -23,23 +26,26 @@ TArray<UInv_InventoryItem*> FInv_InventoryFastArray::GetAllItems() const
 void FInv_InventoryFastArray::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
 {
 	UInv_InventoryComponent* InventoryComponent = Cast<UInv_InventoryComponent>(OwnerComponent);
-	if (!IsValid(InventoryComponent)) return;
+	const bool bIsInventoryComponentAvailable = IsValid(InventoryComponent);
 
 	for(int32 Index : RemovedIndices)
 	{
-		InventoryComponent->OnItemRemoved.Broadcast(Entries[Index].Item);
+		if (bIsInventoryComponentAvailable)
+			InventoryComponent->OnItemRemoved.Broadcast(Entries[Index].Item);
+		OnItemRemoved.Broadcast(Entries[Index].Item);
 	}
 }
 
 void FInv_InventoryFastArray::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize)
 {
 	UInv_InventoryComponent* InventoryComponent = Cast<UInv_InventoryComponent>(OwnerComponent);
-	if (!IsValid(InventoryComponent)) return;
-
+	const bool bIsInventoryComponentAvailable = IsValid(InventoryComponent);
 	for (int32 Index : AddedIndices)
 	{
 		Entries[Index].Item->LoadStaticItemManifest();
-		InventoryComponent->OnItemAdded.Broadcast(Entries[Index].Item);
+		OnItemAdded.Broadcast(Entries[Index].Item);
+		if (bIsInventoryComponentAvailable)
+			InventoryComponent->OnItemAdded.Broadcast(Entries[Index].Item);
 	}
 }
 
@@ -60,17 +66,34 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 	return NewEntry.Item;
 }
 
-UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_InventoryItem* Item)
+UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID)
 {
 	check(OwnerComponent)
 	AActor* OwnerActor = OwnerComponent->GetOwner();
 	check(OwnerActor->HasAuthority());
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
-	NewEntry.Item = Item;
+	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, ExternalComponent);
+	ExternalComponent->AddRepSubObj(NewEntry.Item);
 
 	MarkItemDirty(NewEntry);
-	return Item;
+	return NewEntry.Item;
+}
+
+UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID)
+{
+	check(OwnerComponent);
+	AActor* OwnerActor = OwnerComponent->GetOwner();
+	check(OwnerActor->HasAuthority());
+	UInv_InventoryComponent* IC = Cast<UInv_InventoryComponent>(OwnerComponent);
+	if (!IsValid(IC)) return nullptr;
+
+	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
+	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, IC);
+	IC->AddRepSubObj(NewEntry.Item);
+	MarkItemDirty(NewEntry);
+
+	return NewEntry.Item;
 }
 
 void FInv_InventoryFastArray::RemoveEntry(UInv_InventoryItem* Item)

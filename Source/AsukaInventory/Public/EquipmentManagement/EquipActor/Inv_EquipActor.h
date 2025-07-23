@@ -18,6 +18,7 @@ public:
 
 	FGameplayTag GetEquipmentType() const { return EquipmentType; }
 	void SetEquipmentType(const FGameplayTag& NewType) { EquipmentType = NewType; }
+
 private:
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FGameplayTag EquipmentType;

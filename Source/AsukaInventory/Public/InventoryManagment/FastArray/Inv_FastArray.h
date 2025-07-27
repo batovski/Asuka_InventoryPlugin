@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Items/Fragments/Inv_ItemFragment.h"
 
 #include "UObject/Interface.h"
 #include "Net/Serialization/FastArraySerializer.h"
+#include "StructUtils/InstancedStruct.h"
 #include "Inv_FastArray.generated.h"
 
 class UInv_ExternalInventoryComponent;
@@ -54,8 +56,11 @@ public:
 	}
 
 	UInv_InventoryItem* AddEntry(UInv_ItemComponent* ItemComponent);
-	UInv_InventoryItem* AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID);
-	UInv_InventoryItem* AddEntry(const FPrimaryAssetId& StaticItemManifestID);
+	UInv_InventoryItem* AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID,
+		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
+	UInv_InventoryItem* AddEntry(const FPrimaryAssetId& StaticItemManifestID,
+		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
+
 	void RemoveEntry(UInv_InventoryItem* Item);
 	UInv_InventoryItem* FindFirstItemByType(const FGameplayTag& ItemType) const;
 
@@ -95,6 +100,7 @@ public:
 	UInv_InventoryItem* FindFirstItemByType(const FGameplayTag& ItemType) const;
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
 	void RemoveItemFromList(UInv_InventoryItem* Item);
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
-	UInv_InventoryItem* AddItemToList(const FPrimaryAssetId& StaticItemManifestID);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, meta = (AutoCreateRefTerm = "DynamicFragments"), Category = "Interface")
+	UInv_InventoryItem* AddItemToList(const FPrimaryAssetId& StaticItemManifestID,
+		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments);
 };

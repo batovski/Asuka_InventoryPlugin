@@ -5,9 +5,7 @@
 
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
-#include "Items/Inv_InventoryItem.h"
 #include "Net/UnrealNetwork.h"
-#include "Widgets/Inventory/Spatial/Inv_LootInventoryGrid.h"
 #include "Widgets/Inventory/Spatial/Inv_SpatialInventory.h"
 
 UInv_ExternalInventoryComponent::UInv_ExternalInventoryComponent() : InventoryList(this)
@@ -65,9 +63,10 @@ void UInv_ExternalInventoryComponent::RemoveItemFromList_Implementation(UInv_Inv
 
 
 UInv_InventoryItem* UInv_ExternalInventoryComponent::AddItemToList_Implementation(
-	const FPrimaryAssetId& StaticItemManifestID)
+	const FPrimaryAssetId& StaticItemManifestID,
+	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
 {
-	return InventoryList.AddEntry(this, StaticItemManifestID);
+	return InventoryList.AddEntry(this, StaticItemManifestID, DynamicFragments);
 }
 
 // Called when the game starts

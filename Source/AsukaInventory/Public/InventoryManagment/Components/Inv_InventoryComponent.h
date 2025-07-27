@@ -69,13 +69,13 @@ public:
 	void SpawnDroppedItem(UInv_InventoryItem* Item, int32 StackCount);
 
 	UInv_InventoryBase* GetInventoryMenu() const { return InventoryMenu; }
-	FInv_InventoryFastArray& GetInventoryList() { return InventoryList; }
+	const FInv_InventoryFastArray& GetInventoryList() const { return InventoryList; }
 
 
 	// IInv_ItemListInterface interface:
 	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override { return InventoryList.FindFirstItemByType(ItemType); }
 	virtual void RemoveItemFromList_Implementation(UInv_InventoryItem* Item) override;
-	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID) override;
+	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments) override;
 
 	FInventoryItemChange OnItemAdded;
 	FInventoryItemChange OnItemRemoved;

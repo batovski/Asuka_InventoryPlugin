@@ -144,7 +144,7 @@ void UInv_InventoryComponent::Server_AddNewItemByComponent_Implementation(UInv_I
 
 void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount)
 {
-	UInv_InventoryItem* NewItem = Execute_AddItemToList(TargetInventory.GetObject(),Item->GetStaticItemManifestAssetId());
+	UInv_InventoryItem* NewItem = Execute_AddItemToList(TargetInventory.GetObject(),Item->GetStaticItemManifestAssetId(), Item->GetDynamicItemFragments());
 	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
 	{
 		StackFragment->SetStackCount(StackCount);
@@ -220,7 +220,7 @@ void UInv_InventoryComponent::SpawnDroppedItem(UInv_InventoryItem* Item, int32 S
 	UInv_ItemComponent* NewItemComponent = UInv_ItemComponent::SpawnPickUpActor(PickUpFragment->GetPickUpActorClass(),this, SpawnLocation, SpawnRotation);
 	if (!NewItemComponent) return;
 	NewItemComponent->InitItemManifest(Item->GetStaticItemManifestAssetId()); //TODO : REDUNDANT
-	NewItemComponent->InitDynamicData(Item->GetDynamicItemFragmentsMutable());
+	NewItemComponent->InitDynamicData(Item->GetDynamicItemFragments());
 	if(FInv_StackableFragment* StackableFragment = NewItemComponent->GetFragmentOfTypeMutable<FInv_StackableFragment>())
 	{
 		StackableFragment->SetStackCount(StackCount);
@@ -232,9 +232,10 @@ void UInv_InventoryComponent::RemoveItemFromList_Implementation(UInv_InventoryIt
 	InventoryList.RemoveEntry(Item);
 }
 
-UInv_InventoryItem* UInv_InventoryComponent::AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID)
+UInv_InventoryItem* UInv_InventoryComponent::AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID,
+	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
 {
-	return InventoryList.AddEntry(StaticItemManifestID);
+	return InventoryList.AddEntry(StaticItemManifestID, DynamicFragments);
 }
 
 void UInv_InventoryComponent::Server_ConsumeItem_Implementation(UInv_InventoryItem* Item)

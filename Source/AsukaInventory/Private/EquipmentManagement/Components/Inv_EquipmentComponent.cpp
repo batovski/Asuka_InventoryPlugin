@@ -100,7 +100,7 @@ void UInv_EquipmentComponent::OnItemEquipped(UInv_InventoryItem* EquippedItem)
 
 	if (!OwningSkeletalMesh.IsValid()) return;
 	AInv_EquipActor* NewEquippedActor = SpawnedEquippedActor(EquipmentFragment, ItemManifest, OwningSkeletalMesh.Get());
-
+	NewEquippedActor->SetOwningItem(EquippedItem);
 	EquippedActors.Add(NewEquippedActor);
 }
 

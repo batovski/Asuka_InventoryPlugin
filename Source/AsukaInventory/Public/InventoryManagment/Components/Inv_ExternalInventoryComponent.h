@@ -31,7 +31,7 @@ public:
 	// IInv_ItemListInterface interface:
 	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override { return InventoryList.FindFirstItemByType(ItemType); }
 	virtual void RemoveItemFromList_Implementation(UInv_InventoryItem* Item) override;
-	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID) override;
+	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments) override;
 
 protected:
 

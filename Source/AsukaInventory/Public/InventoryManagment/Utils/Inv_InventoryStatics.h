@@ -10,6 +10,7 @@
 #include "Widgets/Utils/Inv_WidgetUtils.h"
 #include "Inv_InventoryStatics.generated.h"
 
+class UInv_ExternalInventoryComponent;
 class UInv_InventoryBase;
 class UInv_HoverItem;
 class UInv_InventoryComponent;
@@ -61,7 +62,9 @@ public:
 
 	static FInv_ItemManifest GetItemManifestFromID(const FPrimaryAssetId& ItemId);
 
-	static UInv_InventoryItem* CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject);
+	static UInv_InventoryItem* CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
+
+	static UInv_ExternalInventoryComponent* CreateExternalInventoryComponent(UObject* WorldContextObject, const UInv_InventoryComponent* InventoryComponent, const FString& PickupMessage = {});
 };
 
 template<typename T, typename FuncT>

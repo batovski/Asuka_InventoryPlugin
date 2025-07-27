@@ -7,6 +7,8 @@
 #include "GameFramework/Actor.h"
 #include "Inv_EquipActor.generated.h"
 
+class UInv_InventoryItem;
+
 UCLASS()
 class ASUKAINVENTORY_API AInv_EquipActor : public AActor
 {
@@ -22,13 +24,19 @@ public:
 	void SetEquipmentType(const FGameplayTag& NewType) { EquipmentType = NewType; }
 	UFUNCTION(Server, Reliable)
 	void SetOwningController(AController* Controller);
+	UFUNCTION(Server, Reliable)
+	void SetOwningItem(UInv_InventoryItem* Item);
 
 	UFUNCTION(BlueprintCallable)
 	AController* GetOwningController();
+	UFUNCTION(BlueprintCallable)
+	UInv_InventoryItem* GetOwningItem() const;
 
 private:
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FGameplayTag EquipmentType;
 	UPROPERTY(VisibleAnywhere, Replicated, Category = "Inventory")
 	TWeakObjectPtr<AController> OwningController {nullptr};
+	UPROPERTY(VisibleAnywhere, Replicated, Category = "Inventory")
+	TWeakObjectPtr<UInv_InventoryItem> OwningItem{ nullptr };
 };

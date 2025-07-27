@@ -58,7 +58,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 	if (!IsValid(IC)) return nullptr;
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
-	NewEntry.Item = ItemComponent->CreateInventoryItemFromComponent(OwnerActor);
+	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(ItemComponent->GetStaticItemManifestID(), ItemComponent, ItemComponent->GetDynamicFragmentsMutable());
 
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
@@ -66,21 +66,21 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 	return NewEntry.Item;
 }
 
-UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID)
+UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID,
+	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
 {
 	check(OwnerComponent)
 	AActor* OwnerActor = OwnerComponent->GetOwner();
 	check(OwnerActor->HasAuthority());
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
-	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, ExternalComponent);
+	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, ExternalComponent, DynamicFragments);
 	ExternalComponent->AddRepSubObj(NewEntry.Item);
 
 	MarkItemDirty(NewEntry);
 	return NewEntry.Item;
 }
-
-UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID)
+UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
 {
 	check(OwnerComponent);
 	AActor* OwnerActor = OwnerComponent->GetOwner();
@@ -89,7 +89,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& Sta
 	if (!IsValid(IC)) return nullptr;
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
-	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, IC);
+	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, IC, DynamicFragments);
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
 

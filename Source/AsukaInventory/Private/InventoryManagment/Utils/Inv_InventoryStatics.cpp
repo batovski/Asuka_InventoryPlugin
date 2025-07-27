@@ -3,6 +3,7 @@
 
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 
+#include "InventoryManagment/Components/Inv_ExternalInventoryComponent.h"
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "Items/Inv_InventoryItem.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
@@ -111,11 +112,42 @@ FInv_ItemManifest UInv_InventoryStatics::GetItemManifestFromID(const FPrimaryAss
 	return Cast<UInv_ItemDataAsset>(Asset)->ItemManifest;
 }
 
-UInv_InventoryItem* UInv_InventoryStatics::CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject)
+UInv_InventoryItem* UInv_InventoryStatics::CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
 {
 	UInv_InventoryItem* NewItem = NewObject<UInv_InventoryItem>(WorldContextObject, UInv_InventoryItem::StaticClass());;
 	NewItem->SetStaticItemManifestAssetId(ItemId);
 	NewItem->LoadStaticItemManifest();
+	if(!DynamicFragments.IsEmpty())
+	{
+		NewItem->SetDynamicItemFragments(DynamicFragments);
+	}
 	NewItem->GetItemManifestMutable().Manifest();
 	return NewItem;
+}
+
+UInv_ExternalInventoryComponent* UInv_InventoryStatics::CreateExternalInventoryComponent(UObject* WorldContextObject,
+	const UInv_InventoryComponent* InventoryComponent, const FString& PickupMessage)
+{
+	if (!IsValid(InventoryComponent))
+	{
+		return nullptr;
+	}
+
+	UInv_ExternalInventoryComponent* ExternalInventoryComponent = NewObject<UInv_ExternalInventoryComponent>(WorldContextObject, UInv_ExternalInventoryComponent::StaticClass());
+
+	if(!PickupMessage.IsEmpty())
+	{
+		ExternalInventoryComponent->GetPickupMessage() = PickupMessage;
+	}
+
+	const TArray<UInv_InventoryItem*>& SourceItems = InventoryComponent->GetInventoryList().GetAllItems();
+	for (UInv_InventoryItem* SourceItem : SourceItems)
+	{
+		if (IsValid(SourceItem))
+		{
+			UInv_ExternalInventoryComponent::Execute_AddItemToList(ExternalInventoryComponent, SourceItem->GetStaticItemManifestAssetId(), SourceItem->GetDynamicItemFragments());
+		}
+	}
+
+	return ExternalInventoryComponent;
 }

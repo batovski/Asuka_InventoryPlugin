@@ -46,16 +46,6 @@ void UInv_ItemComponent::InitDynamicData(const TArray<TInstancedStruct<FInv_Item
 {
 	DynamicFragments = NewDynamicFragments;
 }
-
-UInv_InventoryItem* UInv_ItemComponent::CreateInventoryItemFromComponent(UObject* WorldContextObject)
-{
-	UInv_InventoryItem* NewItem = NewObject<UInv_InventoryItem>(WorldContextObject, UInv_InventoryItem::StaticClass());;
-	NewItem->SetStaticItemManifestAssetId(GetStaticItemManifestID());
-	NewItem->LoadStaticItemManifest();
-	NewItem->SetDynamicItemFragments(DynamicFragments);
-	NewItem->GetItemManifestMutable().Manifest();
-	return NewItem;
-}
 UInv_ItemComponent* UInv_ItemComponent::SpawnPickUpActor(const TSubclassOf<AActor>& ActorToSpawn, const UObject* WorldContextObject, const FVector& SpawnLocation,
 	const FRotator& SpawnRotation)
 {

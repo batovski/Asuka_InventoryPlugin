@@ -26,10 +26,11 @@ public:
 
 	static UInv_ItemComponent* SpawnPickUpActor(const TSubclassOf<AActor>& ActorToSpawn, const UObject* WorldContextObject, const FVector& SpawnLocation,
 		const FRotator& SpawnRotation);
-	UInv_InventoryItem* CreateInventoryItemFromComponent(UObject* WorldContextObject);
 	FString& GetPickupMessage();
 	FInv_ItemManifest GetItemManifest() const { return StaticItemManifest; }
 	const FPrimaryAssetId& GetStaticItemManifestID() const;
+
+	TArray<TInstancedStruct<FInv_ItemFragment>>& GetDynamicFragmentsMutable() { return DynamicFragments; }
 
 	UFUNCTION()
 	void OnRep_DynamicFragments();

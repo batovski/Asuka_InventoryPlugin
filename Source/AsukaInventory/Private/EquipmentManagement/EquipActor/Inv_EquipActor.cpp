@@ -3,6 +3,7 @@
 
 #include "EquipmentManagement/EquipActor/Inv_EquipActor.h"
 
+#include "Items/Inv_InventoryItem.h"
 #include "Net/UnrealNetwork.h"
 
 
@@ -17,6 +18,7 @@ void AInv_EquipActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ThisClass, OwningController);
+	DOREPLIFETIME(ThisClass, OwningItem);
 }
 
 void AInv_EquipActor::SetOwningController_Implementation(AController* Controller)
@@ -24,8 +26,19 @@ void AInv_EquipActor::SetOwningController_Implementation(AController* Controller
 	OwningController = Controller;
 }
 
+void AInv_EquipActor::SetOwningItem_Implementation(UInv_InventoryItem* Item)
+{
+	if (!IsValid(Item)) return;
+	OwningItem = Item;
+}
+
 AController* AInv_EquipActor::GetOwningController()
 {
 	return OwningController.Get();
+}
+
+UInv_InventoryItem* AInv_EquipActor::GetOwningItem() const
+{
+	return OwningItem.Get();
 }
 

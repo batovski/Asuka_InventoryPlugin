@@ -31,7 +31,5 @@ struct FInv_WeaponFragment : public FInv_InventoryItemFragmentAbstract
 	FInv_WeaponModifier MagazineSize;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	FInv_WeaponModifier CurrentAmmo;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-	float AmmoLeft;
 
 };

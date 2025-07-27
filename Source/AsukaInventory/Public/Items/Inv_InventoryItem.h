@@ -27,7 +27,7 @@ public:
 	const FInv_ItemManifest& GetItemManifest() const;
 	FInv_ItemManifest& GetItemManifestMutable() { return StaticItemManifest.GetMutable<FInv_ItemManifest>();}
 
-	const TArray<TInstancedStruct<FInv_ItemFragment>>& GetDynamicItemFragmentsMutable() { return DynamicItemFragments; }
+	const TArray<TInstancedStruct<FInv_ItemFragment>>& GetDynamicItemFragments() const { return DynamicItemFragments; }
 
 	bool IsStackable() const;
 	bool IsConsumable() const;

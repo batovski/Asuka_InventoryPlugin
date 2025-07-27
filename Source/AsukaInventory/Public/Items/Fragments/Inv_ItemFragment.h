@@ -111,23 +111,38 @@ struct FInv_InventoryItemFragmentAbstract : public FInv_ItemFragment
 	virtual void Assimilate(UInv_CompositeBase* Composite) const;
 
 protected:
-	bool MatchesWidgetTag(const UInv_CompositeBase* Composite) const;
+	virtual bool MatchesWidgetTag(const UInv_CompositeBase* Composite) const;
+};
+
+USTRUCT(meta = (HiddenByDefault))
+struct FInv_UIElementFragmentAbstract : public FInv_InventoryItemFragmentAbstract
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory", meta = (Categories = "UIElementTag"))
+	FGameplayTag UIElementTag = FGameplayTag::EmptyTag;
+
+protected:
+
+	virtual bool MatchesWidgetTag(const UInv_CompositeBase* Composite) const override;
 };
 
 USTRUCT(BlueprintType)
-struct FInv_LabeledNumberFragment : public FInv_InventoryItemFragmentAbstract
+struct FInv_LabeledNumberFragment : public FInv_UIElementFragmentAbstract
 {
 	GENERATED_BODY()
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
 	virtual void Manifest() override;
 	float GetValue() const { return Value; }
 
-	bool bRandomizeOnManifest{ true };
-private:
-	UPROPERTY(EditAnywhere, Category = "Inventory")
+	bool bRandomizeOnManifest{ false };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	FText Text_Label{};
-	UPROPERTY(VisibleAnywhere, Category = "Inventory")
-	float Value{ 0.f };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	float Value;
+
+private:
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	float Min{ 0.f };
@@ -183,13 +198,12 @@ private:
 };
 
 USTRUCT(BlueprintType)
-struct FInv_TextFragment : public FInv_InventoryItemFragmentAbstract
+struct FInv_TextFragment : public FInv_UIElementFragmentAbstract
 {
 	GENERATED_BODY()
 	FText GetText() const { return FragmentText; }
 	void SetText(const FText& NewText) { FragmentText = NewText; }
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
-
 private:
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FText FragmentText;
@@ -238,9 +252,10 @@ struct FInv_EquipmentFragment : public FInv_InventoryItemFragmentAbstract
 	void DestroyAttachedActor() const;
 	FGameplayTag GetEquipmentType() const { return EquipmentType; }
 	void SetEquippedActor(AInv_EquipActor* NewActor);
-private:
-	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (ExcludeBaseStruct))
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory", meta = (ExcludeBaseStruct))
 	TArray<TInstancedStruct<FInv_EquipModifier>> EquipModifiers;
+private:
 	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (ExcludeBaseStruct))
 	TSubclassOf<AInv_EquipActor> EquipActorClass{nullptr};
 	UPROPERTY(EditAnywhere, Category = "Inventory")

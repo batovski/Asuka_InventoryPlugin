@@ -64,6 +64,7 @@ AInv_EquipActor* UInv_EquipmentComponent::SpawnedEquippedActor(FInv_EquipmentFra
 	AInv_EquipActor* SpawnedEquipActor = EquipmentFragment->SpawnAttachedActor(AttachMesh);
 	SpawnedEquipActor->SetEquipmentType(EquipmentFragment->GetEquipmentType());
 	SpawnedEquipActor->SetOwner(GetOwner());
+	SpawnedEquipActor->SetOwningController(OwningPlayerController.Get());
 	EquipmentFragment->SetEquippedActor(SpawnedEquipActor);
 	return SpawnedEquipActor;
 }

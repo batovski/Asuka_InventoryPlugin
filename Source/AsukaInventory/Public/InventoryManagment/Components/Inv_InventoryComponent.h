@@ -69,6 +69,8 @@ public:
 	void SpawnDroppedItem(UInv_InventoryItem* Item, int32 StackCount);
 
 	UInv_InventoryBase* GetInventoryMenu() const { return InventoryMenu; }
+	FInv_InventoryFastArray& GetInventoryList() { return InventoryList; }
+
 
 	// IInv_ItemListInterface interface:
 	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override { return InventoryList.FindFirstItemByType(ItemType); }

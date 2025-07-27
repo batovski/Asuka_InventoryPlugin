@@ -74,3 +74,61 @@ void UInv_InventoryItem::OnRep_DynamicItemFragments()
 {
 	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(),DynamicItemFragments);
 }
+
+const TInstancedStruct<FInv_ItemFragment>* UInv_InventoryItem::GetFragmentStructByTag(const FGameplayTag& FragmentType) const
+{
+	for (const TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
+	{
+		if (const FInv_ItemFragment* FragmentBasePtr = Fragment.GetPtr<FInv_ItemFragment>())
+		{
+			if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
+			{
+				return &Fragment;
+			}
+		}
+	}
+
+	auto& StaticFragments = GetItemManifest().GetFragments();
+	for (const TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
+	{
+		if (const FInv_ItemFragment* FragmentBasePtr = Fragment.GetPtr<FInv_ItemFragment>())
+		{
+			if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
+			{
+				return &Fragment;
+			}
+		}
+	}
+	return nullptr;
+}
+
+TInstancedStruct<FInv_ItemFragment>* UInv_InventoryItem::GetFragmentStructByTagMutable(const FGameplayTag& FragmentType)
+{
+	for (TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
+	{
+		if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>())
+		{
+			if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
+			{
+				return &Fragment;
+			}
+		}
+	}
+
+	auto& StaticFragments = GetItemManifestMutable().GetFragmentsMutable();
+	for (TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
+	{
+		if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>(); FragmentBasePtr->IsDynamicFragment())
+		{
+			if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
+			{
+				// Create a copy preserving the actual derived type
+				TInstancedStruct<FInv_ItemFragment> BaseStruct;
+				BaseStruct.InitializeAsScriptStruct(Fragment.GetScriptStruct(), Fragment.GetMutableMemory());
+				TInstancedStruct<FInv_ItemFragment>& NewDynamicFragment = DynamicItemFragments.Add_GetRef(BaseStruct);
+				return &NewDynamicFragment;
+			}
+		}
+	}
+	return nullptr;
+}

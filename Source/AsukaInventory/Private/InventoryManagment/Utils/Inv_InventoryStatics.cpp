@@ -48,23 +48,38 @@ UInv_HoverItem* UInv_InventoryStatics::GetHoverItem(const APlayerController* Pla
 	return InventoryBase->GetHoverItem();
 }
 
-FInstancedStruct UInv_InventoryStatics::GetFragmentFromItem(const UInv_InventoryItem* Item, FGameplayTag ItemType,
+const FInstancedStruct& UInv_InventoryStatics::GetFragmentFromItem(UInv_InventoryItem* Item, FGameplayTag ItemType,
 	bool& IsFound)
 {
-	const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments = Item->GetItemManifest().GetFragments();
-	auto FoundFragment = Fragments.FindByPredicate([ItemType](const TInstancedStruct<FInv_ItemFragment>& StaticFragment)
-	{
-			return StaticFragment.Get().GetFragmentTag().MatchesTagExact(ItemType);
-	});
-	FInstancedStruct TempStruct;
-	if (!FoundFragment)
+	static FInstancedStruct FoundFragment;
+	if(!IsValid(Item))
 	{
 		IsFound = false;
-		return TempStruct;
+		return FoundFragment;
 	}
-	TempStruct.InitializeAs(FoundFragment->GetScriptStruct());
-	IsFound = true;
-	return TempStruct;
+	if(const TInstancedStruct<FInv_ItemFragment>* Fragment = Item->GetFragmentStructByTag(ItemType))
+	{
+		FoundFragment.InitializeAs(Fragment->GetScriptStruct(), Fragment->GetMemory());
+		IsFound = true;
+		return FoundFragment;
+	}
+	IsFound = false;
+	return FoundFragment;
+}
+
+void UInv_InventoryStatics::SetFragmentValuesByTag(UInv_InventoryItem* Item, const FInstancedStruct& Fragment,
+	FGameplayTag ItemType, bool& IsSucceeded)
+{
+	if(!IsValid(Item))
+	{
+		IsSucceeded = false;
+		return;
+	}
+	if (TInstancedStruct<FInv_ItemFragment>* DesiredFragment = Item->GetFragmentStructByTagMutable(ItemType))
+	{
+		DesiredFragment->InitializeAsScriptStruct(Fragment.GetScriptStruct(),Fragment.GetMemory());
+		IsSucceeded = true;
+	}
 }
 
 const UInv_InventoryItem* UInv_InventoryStatics::GetInventoryItemFromPlayerController(const APlayerController* PlayerController, FGameplayTag ItemType)

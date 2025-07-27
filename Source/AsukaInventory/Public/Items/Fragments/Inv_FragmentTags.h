@@ -16,15 +16,20 @@ namespace FragmentTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(StackableFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(ConsumableFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(EquipmentFragment)
-	namespace ItemDescription
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeaponFragment)
+	namespace WeaponFragmentTags
 	{
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(PrimaryStatFragment)
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(ItemTypeFragment)
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(DescriptionTextFragment)
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(SellValueFragment)
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(RequiredLevelFragment)
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeaponDamage)
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeapomMaxAmmo)
 	}
-
+}
+namespace ItemDescription
+{
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(PrimaryStatFragment)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(ItemTypeFragment)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(DescriptionTextFragment)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SellValueFragment)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(RequiredLevelFragment)
 	namespace StatMod
 	{
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(StatMod_1)

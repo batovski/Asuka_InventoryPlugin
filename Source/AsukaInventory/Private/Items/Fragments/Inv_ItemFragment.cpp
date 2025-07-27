@@ -63,6 +63,7 @@ void FInv_HealthPotionFragment::OnConsume(APlayerController* PC)
 	FInv_ConsumeModifier::OnConsume(PC);
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,FString::Printf(TEXT("health Potion consumed! Healing by: %f"), GetValue()));
 }
+
 void FInv_InventoryItemFragmentAbstract::Assimilate(UInv_CompositeBase* Composite) const
 {
 	if (!MatchesWidgetTag(Composite)) return;
@@ -72,6 +73,11 @@ void FInv_InventoryItemFragmentAbstract::Assimilate(UInv_CompositeBase* Composit
 bool FInv_InventoryItemFragmentAbstract::MatchesWidgetTag(const UInv_CompositeBase* Composite) const
 {
 	return Composite->GetFragmentTag() == FragmentTag;
+}
+
+bool FInv_UIElementFragmentAbstract::MatchesWidgetTag(const UInv_CompositeBase* Composite) const
+{
+	return Composite->GetFragmentTag().MatchesTag(UIElementTag);
 }
 
 void FInv_ConsumableFragment::Manifest()

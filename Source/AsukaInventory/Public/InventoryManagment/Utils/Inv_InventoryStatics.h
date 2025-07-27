@@ -41,10 +41,17 @@ public:
 	static UInv_HoverItem* GetHoverItem(const APlayerController* PlayerController);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	static FInstancedStruct GetFragmentFromItem(const UInv_InventoryItem* Item,
+	static const FInstancedStruct& GetFragmentFromItem(UInv_InventoryItem* Item,
 		UPARAM(meta = (Categories = "FragmentTags"))
 		FGameplayTag ItemType,
 		 bool& IsFound);
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	static void SetFragmentValuesByTag(UInv_InventoryItem* Item,
+		UPARAM(Ref)
+		const FInstancedStruct& Fragment,
+		UPARAM(meta = (Categories = "FragmentTags"))
+		FGameplayTag ItemType,
+		bool& IsSucceeded);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	static const UInv_InventoryItem* GetInventoryItemFromPlayerController(const APlayerController* PlayerController,

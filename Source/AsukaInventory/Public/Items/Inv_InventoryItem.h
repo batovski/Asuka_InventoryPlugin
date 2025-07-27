@@ -38,8 +38,13 @@ public:
 	void OnRep_DynamicItemFragments();
 
 
+	const TInstancedStruct<FInv_ItemFragment>* GetFragmentStructByTag(const FGameplayTag& FragmentType) const;
+	TInstancedStruct<FInv_ItemFragment>* GetFragmentStructByTagMutable(const FGameplayTag& FragmentType);
+
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
 	T* GetFragmentOfTypeMutable();
+	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
+	T* GetFragmentOfTypeWithTag(const FGameplayTag& FragmentType);
 
 private:
 
@@ -77,6 +82,42 @@ T* UInv_InventoryItem::GetFragmentOfTypeMutable()
 				return NewDynamicFragment.GetMutablePtr<T>();
 			}
 			return FragmentPtr;
+		}
+	}
+	return nullptr;
+}
+
+template <typename T> requires std::derived_from<T, FInv_ItemFragment>
+T* UInv_InventoryItem::GetFragmentOfTypeWithTag(const FGameplayTag& FragmentType)
+{
+	for (TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
+	{
+		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
+		{
+			if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>())
+			{
+				if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
+				{
+					return FragmentPtr;
+				}
+			}
+		}
+	}
+
+	auto& StaticFragments = GetItemManifestMutable().GetFragmentsMutable();
+	for (TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
+	{
+		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
+		{
+			if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>(); FragmentBasePtr->IsDynamicFragment())
+			{
+				if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
+				{
+					TInstancedStruct<T> BaseStruct = TInstancedStruct<T>::Make(*FragmentPtr);
+					TInstancedStruct<FInv_ItemFragment>& NewDynamicFragment = DynamicItemFragments.Add_GetRef(BaseStruct);
+					return NewDynamicFragment.GetMutablePtr<T>();
+				}
+			}
 		}
 	}
 	return nullptr;

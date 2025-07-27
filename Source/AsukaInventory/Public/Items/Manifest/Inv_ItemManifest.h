@@ -73,6 +73,7 @@ TArray<const T*> FInv_ItemManifest::GetAllFragmentsOfType() const
 	return FragmentsOfType;
 }
 
+
 template<typename T>
 requires std::derived_from<T, FInv_ItemFragment>
 const T* FInv_ItemManifest::GetFragmentOfTypeWithTag(const FGameplayTag& FragmentType) const

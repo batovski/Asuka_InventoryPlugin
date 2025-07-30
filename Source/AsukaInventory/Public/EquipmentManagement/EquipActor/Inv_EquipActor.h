@@ -27,10 +27,26 @@ public:
 	UFUNCTION(Server, Reliable)
 	void SetOwningItem(UInv_InventoryItem* Item);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	AController* GetOwningController();
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	UInv_InventoryItem* GetOwningItem() const;
+
+	UFUNCTION(Server, Reliable)
+	void SetSkeletalMeshAsset(USkeletalMesh* MeshAsset);
+	UFUNCTION(Server, Reliable)
+	void SetSkeletalMeshAnimationLayer(TSubclassOf<UAnimInstance>  NewAnimLayer);
+
+protected:
+	UFUNCTION(NetMulticast, Reliable)
+	void OnSkeletalMeshAssetChanged(USkeletalMesh* MeshAsset);
+	UFUNCTION(NetMulticast, Reliable)
+	void OnSkeletalMeshAnimationLayerChanged(TSubclassOf<UAnimInstance>  NewAnimLayer);
+
+	UFUNCTION()
+	void OnRep_ReplicatedSkeletalMesh();
+	UFUNCTION()
+	void OnRep_ReplicatedAnimationLayer();
 
 private:
 	UPROPERTY(EditAnywhere, Category = "Inventory")
@@ -39,4 +55,8 @@ private:
 	TWeakObjectPtr<AController> OwningController {nullptr};
 	UPROPERTY(VisibleAnywhere, Replicated, Category = "Inventory")
 	TWeakObjectPtr<UInv_InventoryItem> OwningItem{ nullptr };
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ReplicatedSkeletalMesh, Category = "Inventory")
+	TSoftObjectPtr<USkeletalMesh> ReplicatedSkeletalMesh;
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ReplicatedAnimationLayer, Category = "Inventory")
+	TSoftClassPtr<UAnimInstance> AnimationLayer{ nullptr };
 };

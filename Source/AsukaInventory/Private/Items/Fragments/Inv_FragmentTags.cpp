@@ -17,6 +17,9 @@ namespace FragmentTags
 	UE_DEFINE_GAMEPLAY_TAG(ConsumableFragment, "FragmentTags.ConsumableFragment")
 	UE_DEFINE_GAMEPLAY_TAG(EquipmentFragment, "FragmentTags.EquipmentFragment")
 	UE_DEFINE_GAMEPLAY_TAG(WeaponFragment, "FragmentTags.WeaponFragment")
+	UE_DEFINE_GAMEPLAY_TAG(SkeltalMeshFragment, "FragmentTags.SkeltonMeshFragment")
+	UE_DEFINE_GAMEPLAY_TAG(AnimLayerFragment, "FragmentTags.AnimLayerFragment")
+	UE_DEFINE_GAMEPLAY_TAG(GameplayAbilitiesFragment, "FragmentTags.GameplayAbilitiesFragment")
 	namespace WeaponFragmentTags
 	{
 		UE_DEFINE_GAMEPLAY_TAG(WeaponDamage, "FragmentTags.WeaponFragment.WeaponDamage")
@@ -26,7 +29,7 @@ namespace FragmentTags
 
 namespace ItemDescription
 {
-	UE_DEFINE_GAMEPLAY_TAG(ItemNameFragment, "UIElementTag.ItemNameFragment")
+	UE_DEFINE_GAMEPLAY_TAG(ItemNameFragment, "UIElementTag.ItemDescription.ItemNameFragment")
 	UE_DEFINE_GAMEPLAY_TAG(PrimaryStatFragment, "UIElementTag.ItemDescription.PrimaryStatFragment")
 	UE_DEFINE_GAMEPLAY_TAG(ItemTypeFragment, "UIElementTag.ItemDescription.ItemTypeFragment")
 	UE_DEFINE_GAMEPLAY_TAG(DescriptionTextFragment, "UIElementTag.ItemDescription.DescriptionTextFragment")

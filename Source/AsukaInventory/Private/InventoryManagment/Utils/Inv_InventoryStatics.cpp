@@ -106,10 +106,13 @@ FInv_ItemManifest UInv_InventoryStatics::GetItemManifestFromID(const FPrimaryAss
 	if (!IsValid(Asset))
 	{
 		auto Handle = AssetManager.LoadPrimaryAsset(ItemId);
-		Handle->WaitUntilComplete();
-		Asset = Handle->GetLoadedAsset();
+		if (Handle)
+		{
+			Handle->WaitUntilComplete();
+			Asset = Handle->GetLoadedAsset();
+		}
 	}
-	return Cast<UInv_ItemDataAsset>(Asset)->ItemManifest;
+	return Asset ? Cast<UInv_ItemDataAsset>(Asset)->ItemManifest : FInv_ItemManifest();
 }
 
 UInv_InventoryItem* UInv_InventoryStatics::CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)

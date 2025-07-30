@@ -225,6 +225,15 @@ void UInv_InventoryComponent::SpawnDroppedItem(UInv_InventoryItem* Item, int32 S
 	{
 		StackableFragment->SetStackCount(StackCount);
 	}
+	FInv_SkeletalMeshFragment* SkeletalMeshFragment = Item->GetFragmentOfTypeMutable<FInv_SkeletalMeshFragment>();
+	if (!SkeletalMeshFragment) return;
+	
+	// Use the replicated function to set the skeletal mesh asset
+	USkeletalMesh* MeshAsset = SkeletalMeshFragment->GetDesiredSkeletalMesh();
+	if (IsValid(MeshAsset))
+	{
+		NewItemComponent->SetSkeletalMeshAsset(MeshAsset);
+	}
 }
 
 void UInv_InventoryComponent::RemoveItemFromList_Implementation(UInv_InventoryItem* Item)

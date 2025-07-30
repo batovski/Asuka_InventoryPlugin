@@ -19,7 +19,6 @@ public:
 	// Sets default values for this component's properties
 	UInv_ExternalInventoryComponent();
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	void OpenItemsContainer(APlayerController* PlayerController);
 	TArray<UInv_InventoryItem* > GetInventoryItems() const { return InventoryList.GetAllItems(); }
 	FInventoryFastArrayItemChange& GetItemAddDelegate() { return InventoryList.OnItemAdded; }
 	FInventoryFastArrayItemChange& GetItemRemoveDelegate() { return InventoryList.OnItemRemoved; }
@@ -32,6 +31,9 @@ public:
 	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override { return InventoryList.FindFirstItemByType(ItemType); }
 	virtual void RemoveItemFromList_Implementation(UInv_InventoryItem* Item) override;
 	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments) override;
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void OpenItemsContainer(APlayerController* PlayerController);
 
 protected:
 

@@ -7,6 +7,8 @@
 #include "Items/Inv_InventoryItem.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/SkeletalMesh.h"
+#include "Components/SkeletalMeshComponent.h"
 
 UInv_ItemComponent::UInv_ItemComponent()
 {
@@ -29,6 +31,7 @@ void UInv_ItemComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ThisClass, StaticItemManifestID);
 	DOREPLIFETIME(ThisClass, DynamicFragments);
+	DOREPLIFETIME(ThisClass, ReplicatedSkeletalMesh);
 }
 
 void UInv_ItemComponent::PickedUp()
@@ -83,5 +86,31 @@ void UInv_ItemComponent::ApplyDynamicFragmentsToManifest()
 		StaticItemManifest = UInv_InventoryStatics::GetItemManifestFromID(StaticItemManifestID);
 	}
 	UInv_InventoryItem::UpdateManifestData(StaticItemManifest.GetFragmentsMutable(), DynamicFragments);
+}
+
+void UInv_ItemComponent::SetSkeletalMeshAsset_Implementation(USkeletalMesh* MeshAsset)
+{
+	ReplicatedSkeletalMesh = MeshAsset;
+	OnSkeletalMeshAssetChanged(MeshAsset);
+}
+
+void UInv_ItemComponent::OnSkeletalMeshAssetChanged_Implementation(USkeletalMesh* MeshAsset)
+{
+	if (USkeletalMeshComponent* MeshComponent = GetOwner()->GetComponentByClass<USkeletalMeshComponent>())
+	{
+		MeshComponent->SetSkeletalMeshAsset(MeshAsset);
+	}
+}
+
+void UInv_ItemComponent::OnRep_ReplicatedSkeletalMesh()
+{
+	USkeletalMesh* LoadedMesh = ReplicatedSkeletalMesh.LoadSynchronous();
+	if (IsValid(LoadedMesh))
+	{
+		if (USkeletalMeshComponent* MeshComponent = GetOwner()->GetComponentByClass<USkeletalMeshComponent>())
+		{
+			MeshComponent->SetSkeletalMeshAsset(LoadedMesh);
+		}
+	}
 }
 

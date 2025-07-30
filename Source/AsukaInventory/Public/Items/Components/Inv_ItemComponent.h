@@ -38,6 +38,14 @@ public:
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
 	T* GetFragmentOfTypeMutable();
 
+	// Skeletal mesh replication
+	UFUNCTION(Server, Reliable)
+	void SetSkeletalMeshAsset(USkeletalMesh* MeshAsset);
+	UFUNCTION(NetMulticast, Reliable)
+	void OnSkeletalMeshAssetChanged(USkeletalMesh* MeshAsset);
+	UFUNCTION()
+	void OnRep_ReplicatedSkeletalMesh();
+
 protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Inventory")
 	void OnPickedUp();
@@ -54,6 +62,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FString PickupMessage;
+
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ReplicatedSkeletalMesh, Category = "Inventory")
+	TSoftObjectPtr<USkeletalMesh> ReplicatedSkeletalMesh;
 };
 
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>

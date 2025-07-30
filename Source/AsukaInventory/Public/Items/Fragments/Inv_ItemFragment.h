@@ -3,12 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayAbilitySpecHandle.h"
 #include "GameplayTagContainer.h"
 #include "Inv_FragmentTags.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Inv_ItemFragment.generated.h"
 
 
+class UGameplayAbility;
 class AInv_EquipActor;
 struct FInv_ConsumeModifier;
 class UInv_CompositeBase;
@@ -36,7 +38,6 @@ struct FInv_ItemFragment
 	bool IsDynamicFragment() const { return bDynamicFragment; }
 
 protected:
-	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (Categories="FragmentTags"))
 	FGameplayTag FragmentTag = FGameplayTag::EmptyTag;
 
 	bool bDynamicFragment{ false }; // If true, this fragment is dynamic and can be modified at runtime will be synced with the item component.
@@ -220,28 +221,46 @@ struct FInv_HealthPotionFragment : public FInv_ConsumeModifier
 //
 
 USTRUCT(BlueprintType)
-struct FInv_EquipModifier : public FInv_LabeledNumberFragment
+struct FInv_EquipModifier : public FInv_InventoryItemFragmentAbstract
 {
 	GENERATED_BODY()
 
 	virtual void OnEquip(APlayerController* PC) {}
 	virtual void OnUnEquip(APlayerController* PC) {}
+
+	TWeakObjectPtr<AInv_EquipActor> EquippedActor{ nullptr };
 };
 
 USTRUCT(BlueprintType)
-struct FInv_ArmorModifier : public FInv_EquipModifier
+struct FInv_AnimLayerModifier : public FInv_EquipModifier
 {
 	GENERATED_BODY()
-
+	FInv_AnimLayerModifier() { FragmentTag = FragmentTags::AnimLayerFragment; }
 	virtual void OnEquip(APlayerController* PC) override;
 	virtual void OnUnEquip(APlayerController* PC) override;
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	TSoftClassPtr<UAnimInstance> AnimationLayer;
+};
+
+USTRUCT(BlueprintType)
+struct FInv_GameplayAbilitiesModifier : public FInv_EquipModifier
+{
+	GENERATED_BODY()
+	FInv_GameplayAbilitiesModifier() { FragmentTag = FragmentTags::GameplayAbilitiesFragment; }
+	virtual void OnEquip(APlayerController* PC) override;
+	virtual void OnUnEquip(APlayerController* PC) override;
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	TArray<TSoftClassPtr<UGameplayAbility>> Abilities {};
+
+	TArray<FGameplayAbilitySpecHandle> GrantedAbilities{};
 };
 
 USTRUCT(BlueprintType)
 struct FInv_EquipmentFragment : public FInv_InventoryItemFragmentAbstract
 {
 	GENERATED_BODY()
-	bool bEquipped{ false };
 	FInv_EquipmentFragment() { FragmentTag = FragmentTags::EquipmentFragment; }
 	virtual void Manifest() override;
 	virtual void OnEquip(APlayerController* PC);
@@ -265,3 +284,16 @@ private:
 
 	TWeakObjectPtr<AInv_EquipActor> EquippedActor{nullptr};
 };
+
+USTRUCT(BlueprintType)
+struct FInv_SkeletalMeshFragment : public FInv_InventoryItemFragmentAbstract
+{
+	GENERATED_BODY()
+	FInv_SkeletalMeshFragment() { FragmentTag = FragmentTags::SkeltalMeshFragment; }
+
+	USkeletalMesh* GetDesiredSkeletalMesh() const;
+private:
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	TSoftObjectPtr<USkeletalMesh> SkeletalMesh{ nullptr };
+};
+

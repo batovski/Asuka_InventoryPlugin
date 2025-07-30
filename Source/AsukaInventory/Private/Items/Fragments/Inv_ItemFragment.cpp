@@ -3,12 +3,15 @@
 
 #include "Items/Fragments/Inv_ItemFragment.h"
 
+#include "AbilitySystemComponent.h"
 #include "EquipmentManagement/EquipActor/Inv_EquipActor.h"
-#include "Items/Fragments/Inv_FragmentTags.h"
 #include "Widgets/Composite/Inv_CompositeBase.h"
 #include "Widgets/Composite/Inv_Leaf_Image.h"
 #include "Widgets/Composite/Inv_Leaf_LabeledValue.h"
 #include "Widgets/Composite/Inv_Leaf_Text.h"
+#include "Engine/SkeletalMesh.h"
+#include "AbilitySystemGlobals.h"
+#include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 
 
 void FInv_ImageFragment::Assimilate(UInv_CompositeBase* Composite) const
@@ -111,21 +114,66 @@ void FInv_ConsumableFragment::Assimilate(UInv_CompositeBase* Composite) const
 }
 
 
-void FInv_ArmorModifier::OnEquip(APlayerController* PC)
+void FInv_AnimLayerModifier::OnEquip(APlayerController* PC)
 {
 	FInv_EquipModifier::OnEquip(PC);
-	GEngine->AddOnScreenDebugMessage(-1,
-		5.f,
-		FColor::Green,
-		FString::Printf(TEXT("Strength Increased by: %f"), GetValue()));
+	if (!PC || !PC->GetPawn()) return;
+	if(EquippedActor.IsValid())
+	{
+		EquippedActor->SetSkeletalMeshAnimationLayer(AnimationLayer.LoadSynchronous());
+	}
 }
-void FInv_ArmorModifier::OnUnEquip(APlayerController* PC)
+void FInv_AnimLayerModifier::OnUnEquip(APlayerController* PC)
 {
 	FInv_EquipModifier::OnUnEquip(PC);
-	GEngine->AddOnScreenDebugMessage(-1,
-		5.f,
-		FColor::Green,
-		FString::Printf(TEXT("Strength Decreased by: %f"), GetValue()));
+	if (!PC || !PC->GetPawn()) return;
+	if (EquippedActor.IsValid())
+	{
+		EquippedActor->SetSkeletalMeshAnimationLayer(nullptr);
+	}
+}
+
+void FInv_GameplayAbilitiesModifier::OnEquip(APlayerController* PC)
+{
+	FInv_EquipModifier::OnEquip(PC);
+	if (!PC || !PC->GetPawn()) return;
+	if (EquippedActor.IsValid())
+	{
+		if(const AActor* ParentActor = EquippedActor->GetAttachParentActor())
+		{
+			if (const auto ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(ParentActor))
+			{
+				for (auto AbilityClass : Abilities)
+				{
+					if (AbilityClass.IsValid())
+					{
+						TSubclassOf<UGameplayAbility> LoadedAbility = AbilityClass.LoadSynchronous();
+						GrantedAbilities.Emplace(ASC->GiveAbility(ASC->BuildAbilitySpecFromClass(LoadedAbility)));
+					}
+				}
+			}
+		}
+	}
+}
+
+void FInv_GameplayAbilitiesModifier::OnUnEquip(APlayerController* PC)
+{
+	FInv_EquipModifier::OnUnEquip(PC);
+	if (!PC || !PC->GetPawn()) return;
+	if (EquippedActor.IsValid())
+	{
+		if (const AActor* ParentActor = EquippedActor->GetAttachParentActor())
+		{
+			if (const auto ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(ParentActor))
+			{
+				for(auto AbilitySpecHandle : GrantedAbilities)
+				{
+					ASC->ClearAbility(AbilitySpecHandle);
+				}
+				GrantedAbilities.Empty();
+			}
+		}
+	}
 }
 
 void FInv_EquipmentFragment::Manifest()
@@ -140,26 +188,21 @@ void FInv_EquipmentFragment::Manifest()
 
 void FInv_EquipmentFragment::OnEquip(APlayerController* PC)
 {
-	if (bEquipped) return; // Already equipped, do nothing
 	for (auto& Modifier : EquipModifiers)
 	{
 		if (!Modifier.IsValid()) continue;
+		Modifier.GetMutable().EquippedActor = EquippedActor;
 		Modifier.GetMutable().OnEquip(PC);
-		return;
 	}
-	bEquipped = true;
 }
 
 void FInv_EquipmentFragment::OnUnEquip(APlayerController* PC)
 {
-	if (!bEquipped) return; // Not equipped, do nothing
 	for (auto& Modifier : EquipModifiers)
 	{
 		if (!Modifier.IsValid()) continue;
 		Modifier.GetMutable().OnUnEquip(PC);
-		return;
 	}
-	bEquipped = false;
 }
 void FInv_EquipmentFragment::Assimilate(UInv_CompositeBase* Composite) const
 {
@@ -189,5 +232,22 @@ void FInv_EquipmentFragment::DestroyAttachedActor() const
 void FInv_EquipmentFragment::SetEquippedActor(AInv_EquipActor* NewActor)
 {
 	EquippedActor = NewActor;
+}
+
+USkeletalMesh* FInv_SkeletalMeshFragment::GetDesiredSkeletalMesh() const
+{
+	if (SkeletalMesh.IsValid())
+	{
+		return SkeletalMesh.Get();
+	}
+	USkeletalMesh* LoadedMesh = SkeletalMesh.LoadSynchronous();
+
+	if (!IsValid(LoadedMesh))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to load skeletal mesh from soft reference"));
+		return nullptr;
+	}
+	
+	return LoadedMesh;
 }
 

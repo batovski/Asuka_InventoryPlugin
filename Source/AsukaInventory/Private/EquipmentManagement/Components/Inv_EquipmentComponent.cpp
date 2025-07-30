@@ -96,12 +96,23 @@ void UInv_EquipmentComponent::OnItemEquipped(UInv_InventoryItem* EquippedItem)
 	FInv_EquipmentFragment* EquipmentFragment = EquippedItem->GetFragmentOfTypeMutable<FInv_EquipmentFragment>();
 	if (!EquipmentFragment) return;
 
-	EquipmentFragment->OnEquip(OwningPlayerController.Get());
-
 	if (!OwningSkeletalMesh.IsValid()) return;
 	AInv_EquipActor* NewEquippedActor = SpawnedEquippedActor(EquipmentFragment, ItemManifest, OwningSkeletalMesh.Get());
 	NewEquippedActor->SetOwningItem(EquippedItem);
+
+	EquipmentFragment->OnEquip(OwningPlayerController.Get());
+
 	EquippedActors.Add(NewEquippedActor);
+
+	FInv_SkeletalMeshFragment* SkeletalMeshFragment = EquippedItem->GetFragmentOfTypeMutable<FInv_SkeletalMeshFragment>();
+	if (!SkeletalMeshFragment) return;
+
+	USkeletalMesh* MeshAsset = SkeletalMeshFragment->GetDesiredSkeletalMesh();
+	if (IsValid(MeshAsset))
+	{
+		NewEquippedActor->SetSkeletalMeshAsset(MeshAsset);
+	}
+
 }
 
 void UInv_EquipmentComponent::OnItemUnEquipped(UInv_InventoryItem* UnEquippedItem)

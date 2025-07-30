@@ -30,7 +30,8 @@ public class AsukaInventory : ModuleRules
 				"NetCore",
 				"StructUtils",
 				"EnhancedInput",
-				"GameplayTags"
+				"GameplayTags",
+				"GameplayAbilities"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -46,7 +47,8 @@ public class AsukaInventory : ModuleRules
                 "SlateCore",
                 "UMG",
                 "EnhancedInput",
-				"InputCore"
+				"InputCore",
+				"GameplayAbilities"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

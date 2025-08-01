@@ -20,11 +20,11 @@ class ASUKAINVENTORY_API UInv_EquipmentComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:	
-
+	AInv_EquipActor* FindEquippedActorByType(const FGameplayTag& EquipmentType);
 protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
 
+	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void SetOwningSkeletalMesh(USkeletalMeshComponent* NewSkeletalMesh){ OwningSkeletalMesh = NewSkeletalMesh;}
 
 private:	
@@ -38,13 +38,12 @@ private:
 	void InitPlayerController();
 	void InitInventoryComponent();
 	AInv_EquipActor* SpawnedEquippedActor(FInv_EquipmentFragment* EquipmentFragment, const FInv_ItemManifest&, USkeletalMeshComponent* AttachMesh) const;
-	AInv_EquipActor* FindEquippedActorByType(const FGameplayTag& EquipmentType);
 	void RemoveEquippedActor(const FGameplayTag& EquipmentType);
 
 	TWeakObjectPtr<UInv_InventoryComponent> InventoryComponent;
 	TWeakObjectPtr<APlayerController> OwningPlayerController;
 	TWeakObjectPtr<USkeletalMeshComponent> OwningSkeletalMesh;
 
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	TArray<TObjectPtr<AInv_EquipActor>> EquippedActors;
 };

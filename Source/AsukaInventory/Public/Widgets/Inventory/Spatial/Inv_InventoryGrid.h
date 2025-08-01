@@ -44,9 +44,6 @@ public:
 	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_InventoryItem* Item, const int32 StackAmountOverride = -1);
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-	void ShowCursor();
-	void HideCursor();
-
 	void SetOwningCanvasPanel(UCanvasPanel* OwningPanel);
 
 	virtual void DropHoverItem();
@@ -134,9 +131,6 @@ private:
 
 	void PutDownOnIndex(const int32 GridIndex);
 
-	UUserWidget* GetVisibleCursorWidget();
-	UUserWidget* GetHiddenCursorWidget();
-
 	bool IsSameStackable(const UInv_InventoryItem* ClickedInventoryItem) const;
 	void SwapWithHoverItem(UInv_InventoryItem* ClickedInventoryItem, const int32 GridIndex);
 	bool ShouldSwapStackCounts(const int32 RoomInClickedSlot, const int32 HoveredStackCount, const int32 MaxStackSize) const;
@@ -188,22 +182,11 @@ private:
 	TSubclassOf<UInv_HoverItem> HoverItemClass;
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
-	TSubclassOf<UUserWidget> VisibleCursorClass;
-
-	UPROPERTY(EditAnywhere, Category = "Inventory")
-	TSubclassOf<UUserWidget> HiddenCursorClass;
-
-	UPROPERTY(EditAnywhere, Category = "Inventory")
 	TSubclassOf<UInvItemPopUp> ItemPopUpClass;
 
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> CanvasPanel;
-
-	UPROPERTY()
-	TObjectPtr<UUserWidget> VisibleCursorWidget;
-	UPROPERTY()
-	TObjectPtr<UUserWidget> HiddenCursorWidget;
 	UPROPERTY()
 	TObjectPtr<UInvItemPopUp> ItemPopUp;
 

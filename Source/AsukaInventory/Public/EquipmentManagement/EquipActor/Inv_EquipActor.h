@@ -21,7 +21,8 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	FGameplayTag GetEquipmentType() const { return EquipmentType; }
-	void SetEquipmentType(const FGameplayTag& NewType) { EquipmentType = NewType; }
+	UFUNCTION(Server, Reliable)
+	void SetEquipmentType(const FGameplayTag& NewType);
 	UFUNCTION(Server, Reliable)
 	void SetOwningController(AController* Controller);
 	UFUNCTION(Server, Reliable)
@@ -49,7 +50,7 @@ protected:
 	void OnRep_ReplicatedAnimationLayer();
 
 private:
-	UPROPERTY(EditAnywhere, Category = "Inventory")
+	UPROPERTY(EditAnywhere, Replicated, Category = "Inventory")
 	FGameplayTag EquipmentType;
 	UPROPERTY(VisibleAnywhere, Replicated, Category = "Inventory")
 	TWeakObjectPtr<AController> OwningController {nullptr};

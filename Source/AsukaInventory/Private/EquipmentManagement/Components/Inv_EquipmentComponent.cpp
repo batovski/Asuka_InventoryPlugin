@@ -10,12 +10,20 @@
 #include "Items/Inv_InventoryItem.h"
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
+#include "Net/UnrealNetwork.h"
 
 
 void UInv_EquipmentComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	InitPlayerController();
+	SetIsReplicated(true);
+}
+
+void UInv_EquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ThisClass, EquippedActors);
 }
 
 void UInv_EquipmentComponent::InitPlayerController()

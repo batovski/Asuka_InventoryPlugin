@@ -17,14 +17,10 @@ namespace FragmentTags
 	UE_DEFINE_GAMEPLAY_TAG(ConsumableFragment, "FragmentTags.ConsumableFragment")
 	UE_DEFINE_GAMEPLAY_TAG(EquipmentFragment, "FragmentTags.EquipmentFragment")
 	UE_DEFINE_GAMEPLAY_TAG(WeaponFragment, "FragmentTags.WeaponFragment")
+	UE_DEFINE_GAMEPLAY_TAG(WeaponAnimationsFragment, "FragmentTags.WeaponAnimationsFragment")
 	UE_DEFINE_GAMEPLAY_TAG(SkeltalMeshFragment, "FragmentTags.SkeltonMeshFragment")
 	UE_DEFINE_GAMEPLAY_TAG(AnimLayerFragment, "FragmentTags.AnimLayerFragment")
 	UE_DEFINE_GAMEPLAY_TAG(GameplayAbilitiesFragment, "FragmentTags.GameplayAbilitiesFragment")
-	namespace WeaponFragmentTags
-	{
-		UE_DEFINE_GAMEPLAY_TAG(WeaponDamage, "FragmentTags.WeaponFragment.WeaponDamage")
-		UE_DEFINE_GAMEPLAY_TAG(WeapomMaxAmmo, "FragmentTags.WeaponFragment.WeapomMaxAmmo")
-	}
 }
 
 namespace ItemDescription

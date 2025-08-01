@@ -31,5 +31,31 @@ struct FInv_WeaponFragment : public FInv_InventoryItemFragmentAbstract
 	FInv_WeaponModifier MagazineSize;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	FInv_WeaponModifier CurrentAmmo;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	FInv_WeaponModifier BulletsPerCartridge;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	FInv_WeaponModifier FireRate;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	FInv_WeaponModifier AimDistance;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	FInv_WeaponModifier AimViewAngle;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	FInv_WeaponModifier SpreadRadius;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	FInv_WeaponModifier SpreadLineLength;
+
+
+};
+
+USTRUCT(BlueprintType)
+struct FInv_WeaponAnimationsFragment : public FInv_ItemFragment
+{
+	GENERATED_BODY()
+	FInv_WeaponAnimationsFragment() { FragmentTag = FragmentTags::WeaponAnimationsFragment; }
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	TSoftObjectPtr<UAnimMontage> FireMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	TSoftObjectPtr<UAnimMontage> ReloadMontage;
 };

@@ -38,6 +38,9 @@ public:
 
 	void InitLootGrid(UInv_ExternalInventoryComponent* ExternalInventoryComponent, const TArray<UInv_InventoryItem*>& LootList) const;
 
+	virtual void ShowInventoryCursor() override;
+	virtual void HideInventoryCursor() override;
+
 private:
 
 	void DisableButton(UButton* Button) const;
@@ -99,6 +102,15 @@ private:
 
 	UPROPERTY(EditAnywhere, Category="Inventory")
 	TSubclassOf<UInv_ItemDescription> ItemDescriptionClass;
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	bool bKeepCursorActive = false;
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	TSubclassOf<UUserWidget> InventoryCursorWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget>  InventoryCursorWidget;
 
 	UPROPERTY()
 	TObjectPtr<UInv_ItemDescription> ItemDescription;

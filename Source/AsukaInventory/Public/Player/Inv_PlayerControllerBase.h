@@ -24,6 +24,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void ToggleInventory();
 
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void ChangeCursorWidget(UUserWidget* NewCursorWidget);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SetDefaultCursorWidget(UUserWidget* NewCursorWidget);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
@@ -58,4 +64,7 @@ private:
 
 	TWeakObjectPtr<AActor> ThisActor;
 	TWeakObjectPtr<AActor> LastActor;
+
+	UPROPERTY(VisibleAnywhere, Category = "Inventory")
+	TObjectPtr<UUserWidget> DefaultMouseWidget;
 };

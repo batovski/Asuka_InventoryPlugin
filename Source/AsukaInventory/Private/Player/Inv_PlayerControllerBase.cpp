@@ -57,6 +57,24 @@ void AInv_PlayerControllerBase::ToggleInventory()
 	}
 }
 
+void AInv_PlayerControllerBase::ChangeCursorWidget(UUserWidget* NewCursorWidget)
+{
+	if(!IsValid(NewCursorWidget))
+	{
+		SetMouseCursorWidget(EMouseCursor::Default, DefaultMouseWidget);
+	}
+	else
+	{
+		SetMouseCursorWidget(EMouseCursor::Default, NewCursorWidget);
+	}
+}
+
+void AInv_PlayerControllerBase::SetDefaultCursorWidget(UUserWidget* NewCursorWidget)
+{
+	DefaultMouseWidget = NewCursorWidget;
+	SetMouseCursorWidget(EMouseCursor::Default, DefaultMouseWidget);
+}
+
 void AInv_PlayerControllerBase::PrimaryInteract()
 {
 	if (!ThisActor.IsValid()) return;

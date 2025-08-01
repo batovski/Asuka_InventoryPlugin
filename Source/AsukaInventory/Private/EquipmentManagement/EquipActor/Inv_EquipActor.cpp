@@ -23,6 +23,12 @@ void AInv_EquipActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(ThisClass, OwningController);
 	DOREPLIFETIME(ThisClass, OwningItem);
 	DOREPLIFETIME(ThisClass, ReplicatedSkeletalMesh);
+	DOREPLIFETIME(ThisClass, EquipmentType);
+}
+
+void AInv_EquipActor::SetEquipmentType_Implementation(const FGameplayTag& NewType)
+{
+	EquipmentType = NewType;
 }
 
 void AInv_EquipActor::SetOwningController_Implementation(AController* Controller)

@@ -328,10 +328,7 @@ void UInv_InventoryComponent::OpenInventoryMenu()
 	bIsInventoryMenuOpen = true;
 
 	if (!OwningController.IsValid()) return;
-
-	FInputModeGameAndUI InputMode;
-	OwningController->SetInputMode(InputMode);
-	OwningController->SetShowMouseCursor(true);
+	InventoryMenu->ShowInventoryCursor();
 }
 
 void UInv_InventoryComponent::CloseInventoryMenu()
@@ -341,10 +338,7 @@ void UInv_InventoryComponent::CloseInventoryMenu()
 	bIsInventoryMenuOpen = false;
 
 	if (!OwningController.IsValid()) return;
-
-	FInputModeGameOnly InputMode;
-	OwningController->SetInputMode(InputMode);
-	OwningController->SetShowMouseCursor(false);
+	InventoryMenu->HideInventoryCursor();
 }
 
 

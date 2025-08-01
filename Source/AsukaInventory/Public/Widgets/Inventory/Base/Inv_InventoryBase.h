@@ -26,4 +26,6 @@ public:
 	virtual UInv_HoverItem* GetHoverItem() const { return nullptr; }
 	virtual void SetHoverItem(UInv_HoverItem* HoverItem) {}
 	virtual float GetTileSize() const { return 0.f; }
+	virtual void ShowInventoryCursor() {};
+	virtual void HideInventoryCursor() {};
 };

@@ -10,6 +10,7 @@
 #include "Widgets/Utils/Inv_WidgetUtils.h"
 #include "Inv_InventoryStatics.generated.h"
 
+class AInv_EquipActor;
 class UInv_ExternalInventoryComponent;
 class UInv_InventoryBase;
 class UInv_HoverItem;
@@ -44,7 +45,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	static const FInstancedStruct& GetFragmentFromItem(UInv_InventoryItem* Item,
 		UPARAM(meta = (Categories = "FragmentTags"))
-		FGameplayTag ItemType,
+		FGameplayTag FragmentType,
 		 bool& IsFound);
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	static void SetFragmentValuesByTag(UInv_InventoryItem* Item,
@@ -56,6 +57,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	static const UInv_InventoryItem* GetInventoryItemFromPlayerController(const APlayerController* PlayerController,
+		UPARAM(meta = (Categories = "GameItems")) FGameplayTag ItemType);
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	static const UInv_InventoryItem* GetEquipmentItemFromPlayerController(const APlayerController* PlayerController,
+		UPARAM(meta = (Categories = "GameItems")) FGameplayTag ItemType);
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	static const AInv_EquipActor* GetEquipmentActorFromPlayerController(const APlayerController* PlayerController,
 		UPARAM(meta = (Categories = "GameItems")) FGameplayTag ItemType);
 
 	static UInv_InventoryBase* GetInventoryWidget(const APlayerController* PlayerController);

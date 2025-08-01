@@ -9,6 +9,8 @@ void FInv_WeaponFragment::Manifest()
 	Damage.Manifest();
 	MagazineSize.Manifest();
 	CurrentAmmo.Manifest();
+	AimDistance.Manifest();
+	AimViewAngle.Manifest();
 }
 void FInv_WeaponFragment::Assimilate(UInv_CompositeBase* Composite) const
 {
@@ -16,4 +18,6 @@ void FInv_WeaponFragment::Assimilate(UInv_CompositeBase* Composite) const
 	Damage.Assimilate(Composite);
 	MagazineSize.Assimilate(Composite);
 	CurrentAmmo.Assimilate(Composite);
+	AimDistance.Assimilate(Composite);
+	AimViewAngle.Assimilate(Composite);
 }

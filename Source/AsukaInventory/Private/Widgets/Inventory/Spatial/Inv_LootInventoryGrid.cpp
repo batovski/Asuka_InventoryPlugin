@@ -36,7 +36,6 @@ void UInv_LootInventoryGrid::DropHoverItem()
 	}
 
 	ClearHoverItem();
-	ShowCursor();
 }
 
 void UInv_LootInventoryGrid::SetExternalInventoryComponent(UInv_ExternalInventoryComponent* ExternalInventoryComp)

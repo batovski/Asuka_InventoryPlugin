@@ -12,6 +12,7 @@
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 #include "Items/Inv_InventoryItem.h"
+#include "Player/Inv_PlayerControllerBase.h"
 #include "Widgets/Inventory/GridSlots/Inv_EquippedGridSlot.h"
 #include "Widgets/Inventory/HoverItem/Inv_HoverItem.h"
 #include "Widgets/Inventory/SlottedItems/Inv_EquippedSlottedItem.h"
@@ -99,6 +100,7 @@ void UInv_SpatialInventory::NativeOnInitialized()
 				EquippedGridSlot->EquippedGridSlotClicked.AddDynamic(this, &UInv_SpatialInventory::EquippedGridSlotClicked);
 			}
 		});
+	InventoryCursorWidget = CreateWidget<UUserWidget>(GetOwningPlayer(), InventoryCursorWidgetClass);
 }
 
 FReply UInv_SpatialInventory::NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
@@ -189,6 +191,24 @@ void UInv_SpatialInventory::InitLootGrid(UInv_ExternalInventoryComponent* Extern
 	}
 	Grid_Loot->SetVisibility(ESlateVisibility::Visible);
 	Grid_Loot->SetExternalInventoryComponent(ExternalInventoryComponent);
+}
+
+void UInv_SpatialInventory::ShowInventoryCursor()
+{
+	const auto PlayerController = Cast<AInv_PlayerControllerBase>(GetOwningPlayer());
+	FInputModeUIOnly InputMode;
+	PlayerController->SetInputMode(InputMode);
+	PlayerController->SetShowMouseCursor(true);
+	PlayerController->ChangeCursorWidget(InventoryCursorWidget);
+}
+
+void UInv_SpatialInventory::HideInventoryCursor()
+{
+	const auto PlayerController = Cast<AInv_PlayerControllerBase>(GetOwningPlayer());
+	FInputModeGameOnly InputMode;
+	PlayerController->SetInputMode(InputMode);
+	bKeepCursorActive ? PlayerController->SetShowMouseCursor(true) : PlayerController->SetShowMouseCursor(false);
+	PlayerController->ChangeCursorWidget(nullptr);
 }
 
 void UInv_SpatialInventory::ShowEquippables()
@@ -299,11 +319,9 @@ void UInv_SpatialInventory::SetActiveGrid(UInv_InventoryGrid* GridToActivate, UB
 {
 	if (ActiveGrid.IsValid())
 	{
-		ActiveGrid->HideCursor();
 		ActiveGrid->OnHide();
 	}
 	ActiveGrid = GridToActivate;
-	if(ActiveGrid.IsValid()) ActiveGrid->ShowCursor();
 	DisableButton(Button);
 	WidgetSwitcher->SetActiveWidget(GridToActivate);
 }

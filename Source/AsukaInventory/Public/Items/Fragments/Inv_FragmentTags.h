@@ -17,14 +17,10 @@ namespace FragmentTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(ConsumableFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(EquipmentFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeaponFragment)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeaponAnimationsFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SkeltalMeshFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(AnimLayerFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayAbilitiesFragment)
-	namespace WeaponFragmentTags
-	{
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeaponDamage)
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeapomMaxAmmo)
-	}
 }
 namespace ItemDescription
 {

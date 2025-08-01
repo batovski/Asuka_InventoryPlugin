@@ -3,6 +3,8 @@
 
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 
+#include "EquipmentManagement/Components/Inv_EquipmentComponent.h"
+#include "EquipmentManagement/EquipActor/Inv_EquipActor.h"
 #include "InventoryManagment/Components/Inv_ExternalInventoryComponent.h"
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "Items/Inv_InventoryItem.h"
@@ -49,7 +51,7 @@ UInv_HoverItem* UInv_InventoryStatics::GetHoverItem(const APlayerController* Pla
 	return InventoryBase->GetHoverItem();
 }
 
-const FInstancedStruct& UInv_InventoryStatics::GetFragmentFromItem(UInv_InventoryItem* Item, FGameplayTag ItemType,
+const FInstancedStruct& UInv_InventoryStatics::GetFragmentFromItem(UInv_InventoryItem* Item, FGameplayTag FragmentType,
 	bool& IsFound)
 {
 	static FInstancedStruct FoundFragment;
@@ -58,7 +60,7 @@ const FInstancedStruct& UInv_InventoryStatics::GetFragmentFromItem(UInv_Inventor
 		IsFound = false;
 		return FoundFragment;
 	}
-	if(const TInstancedStruct<FInv_ItemFragment>* Fragment = Item->GetFragmentStructByTag(ItemType))
+	if(const TInstancedStruct<FInv_ItemFragment>* Fragment = Item->GetFragmentStructByTag(FragmentType))
 	{
 		FoundFragment.InitializeAs(Fragment->GetScriptStruct(), Fragment->GetMemory());
 		IsFound = true;
@@ -90,6 +92,30 @@ const UInv_InventoryItem* UInv_InventoryStatics::GetInventoryItemFromPlayerContr
 	const UInv_InventoryItem* Item = IC->FindInventoryItem(ItemType);
 	if (!IsValid(Item)) return nullptr;
 	return Item;
+}
+
+const UInv_InventoryItem* UInv_InventoryStatics::GetEquipmentItemFromPlayerController(
+	const APlayerController* PlayerController, FGameplayTag ItemType)
+{
+	if (const AInv_EquipActor* ItemActor = GetEquipmentActorFromPlayerController(PlayerController, ItemType))
+	{
+		return ItemActor->GetOwningItem();
+	}
+	return nullptr;
+}
+
+const AInv_EquipActor* UInv_InventoryStatics::GetEquipmentActorFromPlayerController(
+	const APlayerController* PlayerController, FGameplayTag ItemType)
+{
+	check(IsValid(PlayerController));
+	if (UInv_EquipmentComponent* EquipmentComponent = PlayerController->FindComponentByClass<UInv_EquipmentComponent>())
+	{
+		if (AInv_EquipActor* ItemActor = EquipmentComponent->FindEquippedActorByType(ItemType))
+		{
+			return ItemActor;
+		}
+	}
+	return nullptr;
 }
 
 UInv_InventoryBase* UInv_InventoryStatics::GetInventoryWidget(const APlayerController* PlayerController)

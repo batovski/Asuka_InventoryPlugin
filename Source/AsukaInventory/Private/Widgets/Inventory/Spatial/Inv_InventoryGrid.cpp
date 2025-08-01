@@ -12,6 +12,7 @@
 #include "Items/Inv_InventoryItem.h"
 #include "Items/Fragments/Inv_FragmentTags.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
+#include "Player/Inv_PlayerControllerBase.h"
 #include "Widgets/Inventory/Base/Inv_InventoryBase.h"
 #include "Widgets/Inventory/GridSlots/Inv_GridSlot.h"
 #include "Widgets/Inventory/SlottedItems/Inv_SlottedItem.h"
@@ -797,7 +798,7 @@ void UInv_InventoryGrid::ClearHoverItem()
 
 	GetHoverItem()->RemoveFromParent();
 	InventoryComponent->GetInventoryMenu()->SetHoverItem(nullptr);
-	ShowCursor();
+	InventoryComponent->GetInventoryMenu()->ShowInventoryCursor();
 }
 
 void UInv_InventoryGrid::OnHide()
@@ -895,26 +896,6 @@ bool UInv_InventoryGrid::MatchesCategory(const UInv_InventoryItem* Item) const
 	return Item && Item->GetItemManifest().GetItemCategory() == ItemCategory;
 }
 
-UUserWidget* UInv_InventoryGrid::GetVisibleCursorWidget()
-{
-	if (!IsValid(GetOwningPlayer()) || !IsValid(VisibleCursorClass)) return nullptr;
-	if(!IsValid(VisibleCursorWidget))
-	{
-		VisibleCursorWidget = CreateWidget<UUserWidget>(GetOwningPlayer(), VisibleCursorClass);
-	}
-	return VisibleCursorWidget;
-}
-
-UUserWidget* UInv_InventoryGrid::GetHiddenCursorWidget()
-{
-	if (!IsValid(GetOwningPlayer()) || !IsValid(HiddenCursorClass)) return nullptr;
-	if (!IsValid(HiddenCursorWidget))
-	{
-		HiddenCursorWidget = CreateWidget<UUserWidget>(GetOwningPlayer(), HiddenCursorClass);
-	}
-	return HiddenCursorWidget;
-}
-
 bool UInv_InventoryGrid::IsSameStackable(const UInv_InventoryItem* ClickedInventoryItem) const
 {
 	const bool bIsSameItem = ClickedInventoryItem == GetHoverItem()->GetInventoryItem();
@@ -980,7 +961,6 @@ void UInv_InventoryGrid::ConsumeHoverItemStacks(const int32 ClickedStackCount, c
 	HighlightSlots(GridIndex, Dimensions);
 
 	ClearHoverItem();
-	ShowCursor();
 }
 
 void UInv_InventoryGrid::FillInStack(const int32 FillAmount, const int32 Remainder, const int32 GridIndex)
@@ -1075,19 +1055,6 @@ void UInv_InventoryGrid::DropHoverItem()
 	InventoryComponent->Server_DropItem(GetHoverItem()->GetInventoryItem(),GetHoverItem()->GetStackCount());
 
 	ClearHoverItem();
-	ShowCursor();
-}
-
-void UInv_InventoryGrid::ShowCursor()
-{
-	if(!IsValid(GetOwningPlayer())) return;
-	GetOwningPlayer()->SetMouseCursorWidget(EMouseCursor::Default, GetVisibleCursorWidget());
-}
-
-void UInv_InventoryGrid::HideCursor()
-{
-	if (!IsValid(GetOwningPlayer())) return;
-	GetOwningPlayer()->SetMouseCursorWidget(EMouseCursor::Default, GetHiddenCursorWidget());
 }
 
 void UInv_InventoryGrid::SetOwningCanvasPanel(UCanvasPanel* OwningPanel)

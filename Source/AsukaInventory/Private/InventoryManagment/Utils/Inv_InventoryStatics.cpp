@@ -174,7 +174,7 @@ UInv_ExternalInventoryComponent* UInv_InventoryStatics::CreateExternalInventoryC
 	{
 		if (IsValid(SourceItem))
 		{
-			UInv_ExternalInventoryComponent::Execute_AddItemToList(ExternalInventoryComponent, SourceItem->GetStaticItemManifestAssetId(), SourceItem->GetDynamicItemFragments());
+			UInv_ExternalInventoryComponent::Execute_AddItemToList(ExternalInventoryComponent, SourceItem->GetStaticItemManifestAssetId(), SourceItem->GetDynamicItemFragments(), SourceItem->GetItemIndex());
 		}
 	}
 

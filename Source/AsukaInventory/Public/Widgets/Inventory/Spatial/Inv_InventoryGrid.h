@@ -8,7 +8,7 @@
 #include "Inv_InventoryGrid.generated.h"
 
 
-
+class IInv_ItemListInterface;
 enum class EInv_GridSlotState : uint8;
 struct FGameplayTag;
 struct FInv_ImageFragment;
@@ -38,10 +38,13 @@ public:
 	UFUNCTION()
 	virtual void AddItem(UInv_InventoryItem* Item);
 
+	UFUNCTION()
+	virtual void RemoveItem(UInv_InventoryItem* Item);
+
 	virtual void NativeOnInitialized() override;
 	EInv_ItemCategory GetItemCategory() const { return ItemCategory; }
 	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_ItemComponent* ItemComponent);
-	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_InventoryItem* Item, const int32 StackAmountOverride = -1);
+	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_InventoryItem* Item, const int32 StackAmountOverride = -1, const int32 GridIndex = -1);
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	void SetOwningCanvasPanel(UCanvasPanel* OwningPanel);
@@ -64,21 +67,26 @@ public:
 	FItemEquipped OnItemEquipped;
 
 protected:
+	void DropHoverItemInGrid(UInv_InventoryGrid* InventoryGrid, const int32 GridIndex) const;
 
-	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest, const int32 StackAmountOverride = -1);
+	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest, const int32 StackAmountOverride = -1, const int32 GridIndex = -1);
 	void AddItemToIndices(const FInv_SlotAvailabilityResult& Result, UInv_InventoryItem* NewItem);
 
-	void RemoveItemFromGrid(UInv_InventoryItem* Item, const int32 GridIndex);
+	void RemoveItemFromGrid(const UInv_InventoryItem* Item, const int32 GridIndex);
+	void SetPendingItemInGrid(UInv_InventoryItem* Item, const int32 GridIndex);
 	void RemoveAllItemFromGrid();
 
-	UInv_SlottedItem* FindSlottedItem(const UInv_InventoryItem* Item) const;
+	virtual TScriptInterface<IInv_ItemListInterface> GetGridInventoryInterface() const;
+	virtual UInv_SlottedItem* FindSlottedItem(const UInv_InventoryItem* Item) const;
 
 	virtual bool IsItemCategoryValidForGrid(const EInv_ItemCategory Category) const { return Category == ItemCategory; }
+	virtual void PutDownOnIndex(const int32 GridIndex);
 
 	UFUNCTION()
 	virtual	void OnInventoryMenuToggled(bool IsOpen);
+
 	UFUNCTION()
-	void AddStacks(const FInv_SlotAvailabilityResult& Result);
+	void ChangeItem(UInv_InventoryItem* Item);
 
 	TWeakObjectPtr<UInv_InventoryComponent> InventoryComponent;
 
@@ -114,6 +122,7 @@ private:
 	int32 GetStackAmount(const UInv_GridSlot* GridSlot) const;
 
 	void AssignHoverItem(UInv_InventoryItem* InventoryItem, const int32 GridIndex, const int32 PreviousGridIndex);
+	void AddStacks(const FInv_SlotAvailabilityResult& Result);
 	void PutHoverItemBack();
 
 	void UpdateTileParameters(const FVector2D& CanvasPos, const FVector2D& MousePos);
@@ -128,8 +137,6 @@ private:
 
 	void HighlightSlots(const int32 Index, const FIntPoint& Dimensions);
 	void UnHighlightSlots(const int32 Index, const FIntPoint& Dimensions);
-
-	void PutDownOnIndex(const int32 GridIndex);
 
 	bool IsSameStackable(const UInv_InventoryItem* ClickedInventoryItem) const;
 	void SwapWithHoverItem(UInv_InventoryItem* ClickedInventoryItem, const int32 GridIndex);
@@ -216,6 +223,4 @@ private:
 	bool bLastMouseWithinCanvas;
 	int32 LastHighlightIndex;
 	FIntPoint LastHighlightDimensions;
-
-	int32 LastClickedGridIndex{ INDEX_NONE };
 };

@@ -12,6 +12,7 @@ void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	UObject::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ThisClass, DynamicItemFragments);
 	DOREPLIFETIME(ThisClass, StaticItemManifestAssetId);
+	DOREPLIFETIME(ThisClass, ItemIndex);
 }
 
 void UInv_InventoryItem::SetDynamicItemFragments(const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments)

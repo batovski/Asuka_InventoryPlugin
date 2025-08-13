@@ -25,7 +25,7 @@ class ASUKAINVENTORY_API UInv_SpatialInventory : public UInv_InventoryBase
 	GENERATED_BODY()
 public:
 	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_ItemComponent* ItemComponent) const override;
-	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride = -1, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None) const override;
+	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride = -1, const int32 GridIndex = 1, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None) const override;
 	virtual void NativeOnInitialized() override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;

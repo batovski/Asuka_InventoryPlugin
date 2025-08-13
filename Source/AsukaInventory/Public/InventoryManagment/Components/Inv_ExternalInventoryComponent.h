@@ -22,6 +22,7 @@ public:
 	TArray<UInv_InventoryItem* > GetInventoryItems() const { return InventoryList.GetAllItems(); }
 	FInventoryFastArrayItemChange& GetItemAddDelegate() { return InventoryList.OnItemAdded; }
 	FInventoryFastArrayItemChange& GetItemRemoveDelegate() { return InventoryList.OnItemRemoved; }
+	FInventoryFastArrayItemChange& GetItemChangedDelegate() { return InventoryList.OnItemChanged; }
 
 	void AddRepSubObj(UObject* SubObj);
 
@@ -30,7 +31,9 @@ public:
 	// IInv_ItemListInterface interface:
 	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override { return InventoryList.FindFirstItemByType(ItemType); }
 	virtual void RemoveItemFromList_Implementation(UInv_InventoryItem* Item) override;
-	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments) override;
+	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const int32 GridIndex) override;
+	virtual void ChangeItemGridIndex_Implementation(UInv_InventoryItem* Item, const int32 NewGridIndex) override;
+	virtual void MarkItemDirty_Implementation(UInv_InventoryItem* Item) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void OpenItemsContainer(APlayerController* PlayerController);
@@ -46,8 +49,6 @@ protected:
 private:
 	UFUNCTION()
 	void OnInventoryMenuToggled(const bool IsOpen);
-	UFUNCTION()
-	void OnInventoryItemGridChange(UInv_InventoryItem* Item, int32 StackCount, EInv_ItemCategory OldGridCategory, EInv_ItemCategory NewGridCategory);
 
 	UPROPERTY(EditAnywhere, Category = "Inventory", Replicated)
 	TArray<FPrimaryAssetId> InitialItemsIDs;

@@ -27,6 +27,9 @@ public:
 	const FInv_ItemManifest& GetItemManifest() const;
 	FInv_ItemManifest& GetItemManifestMutable() { return StaticItemManifest.GetMutable<FInv_ItemManifest>();}
 
+	void SetItemIndex(const int32 Index) { ItemIndex = Index; }
+	int32 GetItemIndex() const { return ItemIndex; }
+
 	const TArray<TInstancedStruct<FInv_ItemFragment>>& GetDynamicItemFragments() const { return DynamicItemFragments; }
 
 	bool IsStackable() const;
@@ -56,6 +59,8 @@ private:
 
 	UPROPERTY(meta = (BaseStuct = "/Script/AsukaInventory.Inv_ItemManifest"))
 	FInstancedStruct StaticItemManifest;
+	UPROPERTY(Replicated)
+	int32 ItemIndex{ -1 };
 };
 
 

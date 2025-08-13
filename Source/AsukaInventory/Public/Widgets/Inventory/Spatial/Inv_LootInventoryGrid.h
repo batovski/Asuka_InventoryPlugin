@@ -20,13 +20,14 @@ public:
 	virtual void AddItem(UInv_InventoryItem* Item) override;
 	virtual void DropHoverItem() override;
 	void SetExternalInventoryComponent(UInv_ExternalInventoryComponent* ExternalInventoryComp);
+
 protected:
 	virtual void OnInventoryMenuToggled(const bool IsOpen) override;
 	virtual bool IsItemCategoryValidForGrid(const EInv_ItemCategory Category) const override { return true; }
-private:
 
-	UFUNCTION()
-	void RemoveItem(UInv_InventoryItem* Item);
+	virtual TScriptInterface<IInv_ItemListInterface> GetGridInventoryInterface() const override;
+
+private:
 	void ClearGrid();
 
 	void RemoveExternalInventoryComponentLinkage();

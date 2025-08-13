@@ -48,6 +48,7 @@ public:
 	// FastArraySerializer contract
 	void PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize);
 	void PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize);
+	void PostReplicatedChange(const TArrayView<int32>& ChangedIndices, int32 FinalSize);
 	// End of FastArraySerializer contract
 
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
@@ -57,14 +58,17 @@ public:
 
 	UInv_InventoryItem* AddEntry(UInv_ItemComponent* ItemComponent);
 	UInv_InventoryItem* AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID,
-		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
+		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {}, const int32 GridIndex = -1);
 	UInv_InventoryItem* AddEntry(const FPrimaryAssetId& StaticItemManifestID,
-		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
+		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {}, const int32 GridIndex = -1);
+	bool ChangeEntryGridIndex(UInv_InventoryItem* Item, const int32 NewGridIndex);
+	bool MarkEntryDirty(UInv_InventoryItem* Item);
 
 	void RemoveEntry(UInv_InventoryItem* Item);
 	UInv_InventoryItem* FindFirstItemByType(const FGameplayTag& ItemType) const;
 
 	FInventoryFastArrayItemChange OnItemAdded;
+	FInventoryFastArrayItemChange OnItemChanged;
 	FInventoryFastArrayItemChange OnItemRemoved;
 
 private:
@@ -102,5 +106,9 @@ public:
 	void RemoveItemFromList(UInv_InventoryItem* Item);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, meta = (AutoCreateRefTerm = "DynamicFragments"), Category = "Interface")
 	UInv_InventoryItem* AddItemToList(const FPrimaryAssetId& StaticItemManifestID,
-		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments);
+		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const int32 GridIndex);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
+	void ChangeItemGridIndex(UInv_InventoryItem* Item, const int32 NewGridIndex);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
+	void MarkItemDirty(UInv_InventoryItem* Item);
 };

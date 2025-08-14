@@ -14,11 +14,8 @@ struct FInv_SlotAvailabilityResult;
 class UInv_ItemComponent;
 class UInv_InventoryBase;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryItemChange, UInv_InventoryItem*, Item);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryStackChange, const FInv_SlotAvailabilityResult&, Result);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FItemEquipStatusChanges, UInv_InventoryItem*, Item);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryMenuToggled, bool, bIsOpen);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FInventoryItemGridChange, UInv_InventoryItem*, Item, int32, StackCount, EInv_ItemCategory, OldGridCategory, EInv_ItemCategory, NewGridCategory);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNoRoomInInventory);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Blueprintable )
@@ -37,7 +34,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	void TryAddItemToInventory(TScriptInterface<IInv_ItemListInterface> SourceInventory, TScriptInterface <IInv_ItemListInterface> TargetInventor,
-		UInv_InventoryItem* Item, int32 StackCount, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None);
+		UInv_InventoryItem* Item, int32 StackCount, const int32 GridIndex, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None);
+
+	UFUNCTION(Server, Reliable)
+	void Server_AddNewItemByItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item, int32 StackCount, const int32 GridIndex);
 
 	UFUNCTION(Server,Reliable)
 	void Server_AddNewItemByComponent(UInv_ItemComponent* ItemComponent, int32 StackCount);
@@ -50,9 +50,21 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_DropItemFromExternalInventory(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item, int32 StackCount);
+	UFUNCTION(Server, Reliable)
+	void Server_ChangeItemGridIndex(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item, const int32 NewGridIndex);
+	UFUNCTION(Server, Reliable)
+	void Server_RemoveItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item);
+	UFUNCTION(Server, Reliable)
+	void Server_MarkItemDirty(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item);
 
 	UFUNCTION(Server, Reliable)
 	void Server_ConsumeItem(UInv_InventoryItem* Item);
+
+	UFUNCTION(Server, Reliable)
+	void Server_UpdateItemStackCount(UInv_InventoryItem* Item, const int32 StackCount);
+
+	void TryChangeItemGridIndex(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item, const int32 NewGridIndex);
+
 
 	UFUNCTION(Server, Reliable)
 	void Server_EquipSlotClicked(UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
@@ -69,22 +81,21 @@ public:
 	void SpawnDroppedItem(UInv_InventoryItem* Item, int32 StackCount);
 
 	UInv_InventoryBase* GetInventoryMenu() const { return InventoryMenu; }
+	FInv_InventoryFastArray& GetInventoryListMutable() { return InventoryList; }
 	const FInv_InventoryFastArray& GetInventoryList() const { return InventoryList; }
 
 
 	// IInv_ItemListInterface interface:
 	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override { return InventoryList.FindFirstItemByType(ItemType); }
 	virtual void RemoveItemFromList_Implementation(UInv_InventoryItem* Item) override;
-	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments) override;
+	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const int32 ItemIndex) override;
+	virtual void ChangeItemGridIndex_Implementation(UInv_InventoryItem* Item, const int32 NewGridIndex) override;
+	virtual void MarkItemDirty_Implementation(UInv_InventoryItem* Item) override;
 
-	FInventoryItemChange OnItemAdded;
-	FInventoryItemChange OnItemRemoved;
 	FNoRoomInInventory NoRoomInInventory;
-	FInventoryStackChange OnStackChange;
 	FItemEquipStatusChanges OnItemEquipped;
 	FItemEquipStatusChanges OnItemUnEquipped;
 	FInventoryMenuToggled OnInventoryMenuToggled;
-	FInventoryItemGridChange OnInventoryItemGridChange;
 
 protected:
 	// Called when the game starts
@@ -93,7 +104,7 @@ protected:
 private:
 
 	UFUNCTION(Server, Reliable)
-	void Server_AddNewItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount);
+	void Server_AddNewItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount, int32 GridIndex);
 
 	UFUNCTION(Server, Reliable)
 	void Server_AddStacksToItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount, int32 Remainder);

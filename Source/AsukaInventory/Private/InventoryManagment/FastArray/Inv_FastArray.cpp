@@ -30,8 +30,6 @@ void FInv_InventoryFastArray::PreReplicatedRemove(const TArrayView<int32> Remove
 
 	for(int32 Index : RemovedIndices)
 	{
-		if (bIsInventoryComponentAvailable)
-			InventoryComponent->OnItemRemoved.Broadcast(Entries[Index].Item);
 		OnItemRemoved.Broadcast(Entries[Index].Item);
 	}
 }
@@ -44,8 +42,14 @@ void FInv_InventoryFastArray::PostReplicatedAdd(const TArrayView<int32> AddedInd
 	{
 		Entries[Index].Item->LoadStaticItemManifest();
 		OnItemAdded.Broadcast(Entries[Index].Item);
-		if (bIsInventoryComponentAvailable)
-			InventoryComponent->OnItemAdded.Broadcast(Entries[Index].Item);
+	}
+}
+
+void FInv_InventoryFastArray::PostReplicatedChange(const TArrayView<int32>& ChangedIndices, int32 FinalSize)
+{
+	for (int32 Index : ChangedIndices)
+	{
+		OnItemChanged.Broadcast(Entries[Index].Item);
 	}
 }
 
@@ -67,7 +71,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 }
 
 UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID,
-	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
+	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const int32 GridIndex)
 {
 	check(OwnerComponent)
 	AActor* OwnerActor = OwnerComponent->GetOwner();
@@ -75,12 +79,13 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComp
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, ExternalComponent, DynamicFragments);
+	NewEntry.Item->SetItemIndex(GridIndex);
 	ExternalComponent->AddRepSubObj(NewEntry.Item);
 
 	MarkItemDirty(NewEntry);
 	return NewEntry.Item;
 }
-UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
+UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const int32 GridIndex)
 {
 	check(OwnerComponent);
 	AActor* OwnerActor = OwnerComponent->GetOwner();
@@ -90,10 +95,40 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& Sta
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, IC, DynamicFragments);
+	NewEntry.Item->SetItemIndex(GridIndex);
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
 
 	return NewEntry.Item;
+}
+
+bool FInv_InventoryFastArray::ChangeEntryGridIndex(UInv_InventoryItem* Item, const int32 NewGridIndex)
+{
+	FInv_InventoryEntry* FoundEntry = Entries.FindByPredicate([Item](const FInv_InventoryEntry& Entry)
+	{
+		return Entry.Item == Item;
+	});
+	if(!FoundEntry)
+	{
+		return false;
+	}
+	FoundEntry->Item->SetItemIndex(NewGridIndex);
+	MarkItemDirty(*FoundEntry);
+	return true;
+}
+
+bool FInv_InventoryFastArray::MarkEntryDirty(UInv_InventoryItem* Item)
+{
+	FInv_InventoryEntry* FoundEntry = Entries.FindByPredicate([Item](const FInv_InventoryEntry& Entry)
+		{
+			return Entry.Item == Item;
+		});
+	if (!FoundEntry)
+	{
+		return false;
+	}
+	MarkItemDirty(*FoundEntry);
+	return true;
 }
 
 void FInv_InventoryFastArray::RemoveEntry(UInv_InventoryItem* Item)

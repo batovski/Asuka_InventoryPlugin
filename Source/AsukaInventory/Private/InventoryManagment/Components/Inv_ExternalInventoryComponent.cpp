@@ -38,7 +38,6 @@ void UInv_ExternalInventoryComponent::OpenItemsContainer(APlayerController* Play
 	if (!SpatialInventoryWidget) return;
 
 	PlayerInventoryComponent->OnInventoryMenuToggled.AddDynamic(this, &UInv_ExternalInventoryComponent::OnInventoryMenuToggled);
-	PlayerInventoryComponent->OnInventoryItemGridChange.AddDynamic(this, &UInv_ExternalInventoryComponent::OnInventoryItemGridChange);
 	SpatialInventoryWidget->InitLootGrid(this, InventoryList.GetAllItems());
 }
 
@@ -64,9 +63,21 @@ void UInv_ExternalInventoryComponent::RemoveItemFromList_Implementation(UInv_Inv
 
 UInv_InventoryItem* UInv_ExternalInventoryComponent::AddItemToList_Implementation(
 	const FPrimaryAssetId& StaticItemManifestID,
-	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
+	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments,
+	const int32 GridIndex)
 {
-	return InventoryList.AddEntry(this, StaticItemManifestID, DynamicFragments);
+	return InventoryList.AddEntry(this, StaticItemManifestID, DynamicFragments, GridIndex);
+}
+
+void UInv_ExternalInventoryComponent::ChangeItemGridIndex_Implementation(UInv_InventoryItem* Item,
+	const int32 NewGridIndex)
+{
+	InventoryList.ChangeEntryGridIndex(Item, NewGridIndex);
+}
+
+void UInv_ExternalInventoryComponent::MarkItemDirty_Implementation(UInv_InventoryItem* Item)
+{
+	InventoryList.MarkEntryDirty(Item);
 }
 
 // Called when the game starts
@@ -90,22 +101,6 @@ void UInv_ExternalInventoryComponent::OnInventoryMenuToggled(const bool IsOpen)
 		UInv_InventoryComponent* PlayerInventoryComponent = UInv_InventoryStatics::GetInventoryComponent(UsingPlayerController.Get());
 		check(PlayerInventoryComponent);
 		PlayerInventoryComponent->OnInventoryMenuToggled.RemoveDynamic(this, &UInv_ExternalInventoryComponent::OnInventoryMenuToggled);
-		PlayerInventoryComponent->OnInventoryItemGridChange.RemoveDynamic(this, &UInv_ExternalInventoryComponent::OnInventoryItemGridChange);
-	}
-}
-
-void UInv_ExternalInventoryComponent::OnInventoryItemGridChange(UInv_InventoryItem* Item, int32 StackCount,
-	EInv_ItemCategory OldGridCategory, EInv_ItemCategory NewGridCategory)
-{
-	UInv_InventoryComponent* PlayerInventoryComponent = UInv_InventoryStatics::GetInventoryComponent(UsingPlayerController.Get());
-	check(PlayerInventoryComponent);
-	if(OldGridCategory == EInv_ItemCategory::External && NewGridCategory != EInv_ItemCategory::External)
-	{
-		PlayerInventoryComponent->TryAddItemToInventory(this, PlayerInventoryComponent, Item, StackCount);
-	}
-	else if(NewGridCategory == EInv_ItemCategory::External && OldGridCategory != EInv_ItemCategory::External)
-	{
-		PlayerInventoryComponent->TryAddItemToInventory(PlayerInventoryComponent, this, Item, StackCount, EInv_ItemCategory::External);
 	}
 }
 

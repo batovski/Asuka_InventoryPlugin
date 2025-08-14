@@ -35,7 +35,7 @@ FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_ItemCompo
 	}
 }
 
-FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride,
+FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride, const int32 GridIndex,
 	const EInv_ItemCategory GridCategory) const
 {
 	if (GridCategory == EInv_ItemCategory::None)
@@ -43,11 +43,11 @@ FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_Inventory
 		switch (Item->GetItemManifest().GetItemCategory())
 		{
 		case EInv_ItemCategory::Equippable:
-			return Grid_Equippables->HasRoomForItem(Item, StackAmountOverride);
+			return Grid_Equippables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
 		case EInv_ItemCategory::Consumable:
-			return Grid_Consumables->HasRoomForItem(Item, StackAmountOverride);
+			return Grid_Consumables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
 		case EInv_ItemCategory::Craftable:
-			return Grid_Craftables->HasRoomForItem(Item, StackAmountOverride);
+			return Grid_Craftables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
 		default:
 			return FInv_SlotAvailabilityResult();
 		}
@@ -57,13 +57,13 @@ FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_Inventory
 		switch (GridCategory)
 		{
 		case EInv_ItemCategory::Equippable:
-			return Grid_Equippables->HasRoomForItem(Item, StackAmountOverride);
+			return Grid_Equippables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
 		case EInv_ItemCategory::Consumable:
-			return Grid_Consumables->HasRoomForItem(Item, StackAmountOverride);
+			return Grid_Consumables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
 		case EInv_ItemCategory::Craftable:
-			return Grid_Craftables->HasRoomForItem(Item, StackAmountOverride);
+			return Grid_Craftables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
 		case EInv_ItemCategory::External:
-			return Grid_Loot->HasRoomForItem(Item, StackAmountOverride);
+			return Grid_Loot->HasRoomForItem(Item, StackAmountOverride, GridIndex);
 		default:
 			return FInv_SlotAvailabilityResult();
 		}
@@ -196,7 +196,7 @@ void UInv_SpatialInventory::InitLootGrid(UInv_ExternalInventoryComponent* Extern
 void UInv_SpatialInventory::ShowInventoryCursor()
 {
 	const auto PlayerController = Cast<AInv_PlayerControllerBase>(GetOwningPlayer());
-	FInputModeUIOnly InputMode;
+	FInputModeGameAndUI InputMode;
 	PlayerController->SetInputMode(InputMode);
 	PlayerController->SetShowMouseCursor(true);
 	PlayerController->ChangeCursorWidget(InventoryCursorWidget);
@@ -205,7 +205,9 @@ void UInv_SpatialInventory::ShowInventoryCursor()
 void UInv_SpatialInventory::HideInventoryCursor()
 {
 	const auto PlayerController = Cast<AInv_PlayerControllerBase>(GetOwningPlayer());
-	FInputModeGameOnly InputMode;
+	FInputModeGameAndUI InputMode;
+	InputMode.SetHideCursorDuringCapture(false);
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	PlayerController->SetInputMode(InputMode);
 	bKeepCursorActive ? PlayerController->SetShowMouseCursor(true) : PlayerController->SetShowMouseCursor(false);
 	PlayerController->ChangeCursorWidget(nullptr);
@@ -244,6 +246,8 @@ void UInv_SpatialInventory::EquippedGridSlotClicked(UInv_EquippedGridSlot* GridS
 	check(InventoryComponent);
 
 	InventoryComponent->Server_EquipSlotClicked(HoverItem->GetInventoryItem(), nullptr);
+
+	HoverItem->GetOwningGrid()->RemoveItem(HoverItem->GetInventoryItem());
 
 	if(GetOwningPlayer()->GetNetMode() != NM_DedicatedServer)
 	{

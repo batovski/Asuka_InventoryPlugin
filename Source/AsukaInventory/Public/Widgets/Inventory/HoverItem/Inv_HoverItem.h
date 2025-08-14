@@ -36,9 +36,6 @@ public:
 	void SetInventoryItem(UInv_InventoryItem* Item);
 	FIntPoint GetGridDimensions() const { return GridDimensions; }
 
-	void SetParentGridItemCategory(const EInv_ItemCategory Category) { ParentGridItemCategory = Category; }
-	EInv_ItemCategory GetParentGridItemCategory() const { return ParentGridItemCategory; }
-
 	void SetOwningGrid(UInv_InventoryGrid* Grid);
 	UInv_InventoryGrid* GetOwningGrid() const;
 
@@ -55,6 +52,5 @@ private:
 	TWeakObjectPtr<UInv_InventoryItem> InventoryItem;
 	bool bIsStackable{ false };
 	int32 StackCount {0};
-	EInv_ItemCategory ParentGridItemCategory { EInv_ItemCategory::None};
 	TWeakObjectPtr<UInv_InventoryGrid> OwningGrid;
 };

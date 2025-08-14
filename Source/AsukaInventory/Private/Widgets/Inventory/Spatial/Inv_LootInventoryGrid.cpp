@@ -14,14 +14,16 @@ void UInv_LootInventoryGrid::NativeOnInitialized()
 	Super::NativeOnInitialized();
 	if (InventoryComponent.IsValid())
 	{
-		InventoryComponent->OnItemAdded.RemoveDynamic(this, &ThisClass::AddItem);
-		InventoryComponent->OnStackChange.RemoveDynamic(this, &ThisClass::AddStacks);
+		InventoryComponent->GetInventoryListMutable().OnItemAdded.RemoveDynamic(this, &ThisClass::AddItem);
+		InventoryComponent->GetInventoryListMutable().OnItemRemoved.RemoveDynamic(this, &ThisClass::RemoveItem);
+		InventoryComponent->GetInventoryListMutable().OnItemChanged.RemoveDynamic(this, &ThisClass::ChangeItem);
 	}
 }
 
 void UInv_LootInventoryGrid::AddItem(UInv_InventoryItem* Item)
 {
-	const FInv_SlotAvailabilityResult Result = HasRoomForItem(Item);
+	FInv_StackableFragment* StackableFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>();
+	const FInv_SlotAvailabilityResult Result = HasRoomForItem(Item, StackableFragment ? StackableFragment->GetStackCount() : -1, Item->GetItemIndex());
 	AddItemToIndices(Result, Item);
 }
 
@@ -41,14 +43,16 @@ void UInv_LootInventoryGrid::DropHoverItem()
 void UInv_LootInventoryGrid::SetExternalInventoryComponent(UInv_ExternalInventoryComponent* ExternalInventoryComp)
 {
 	ExternalInventoryComponent = ExternalInventoryComp;
-	ExternalInventoryComponent->GetItemAddDelegate().AddDynamic(this, &UInv_InventoryGrid::AddItem);
+	ExternalInventoryComponent->GetItemAddDelegate().AddDynamic(this, &ThisClass::AddItem);
 	ExternalInventoryComponent->GetItemRemoveDelegate().AddDynamic(this, &ThisClass::RemoveItem);
+	ExternalInventoryComponent->GetItemChangedDelegate().AddDynamic(this, &ThisClass::ChangeItem);
 }
 
 void UInv_LootInventoryGrid::RemoveExternalInventoryComponentLinkage()
 {
-	ExternalInventoryComponent->GetItemAddDelegate().RemoveDynamic(this, &UInv_InventoryGrid::AddItem);
+	ExternalInventoryComponent->GetItemAddDelegate().RemoveDynamic(this, &ThisClass::AddItem);
 	ExternalInventoryComponent->GetItemRemoveDelegate().RemoveDynamic(this, &ThisClass::RemoveItem);
+	ExternalInventoryComponent->GetItemChangedDelegate().RemoveDynamic(this, &ThisClass::ChangeItem);
 	ExternalInventoryComponent = nullptr;
 }
 
@@ -66,13 +70,9 @@ void UInv_LootInventoryGrid::OnInventoryMenuToggled(const bool IsOpen)
 	}
 }
 
-void UInv_LootInventoryGrid::RemoveItem(UInv_InventoryItem* Item)
+TScriptInterface<IInv_ItemListInterface> UInv_LootInventoryGrid::GetGridInventoryInterface() const
 {
-	if(UInv_SlottedItem* SlottedItem = FindSlottedItem(Item))
-	{
-		const int32 Index = SlottedItem->GetGridIndex();
-		RemoveItemFromGrid(SlottedItem->GetInventoryItem(), Index);
-	}
+	return ExternalInventoryComponent.IsValid() ? ExternalInventoryComponent.Get() : nullptr;
 }
 
 void UInv_LootInventoryGrid::ClearGrid()

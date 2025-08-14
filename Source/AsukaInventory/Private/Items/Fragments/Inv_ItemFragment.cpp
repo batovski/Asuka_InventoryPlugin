@@ -40,7 +40,7 @@ void FInv_LabeledNumberFragment::Assimilate(UInv_CompositeBase* Composite) const
 	FInv_InventoryItemFragmentAbstract::Assimilate(Composite);
 	if (!MatchesWidgetTag(Composite)) return;
 	const UInv_Leaf_LabeledValue* LabeledLeaf = Cast<UInv_Leaf_LabeledValue>(Composite);
-
+	if (!IsValid(LabeledLeaf)) return;
 	LabeledLeaf->SetLabelText(Text_Label, bCollapseLabel);
 
 	FNumberFormattingOptions Options;

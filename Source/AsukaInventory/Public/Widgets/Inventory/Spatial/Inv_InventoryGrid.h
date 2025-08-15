@@ -62,6 +62,8 @@ public:
 
 	void OnHide();
 
+	virtual TScriptInterface<IInv_ItemListInterface> GetGridInventoryInterface() const;
+
 	FHoverItemAssigned OnHoverItemAssigned;
 	FHoverItemUnAssigned OnHoverItemUnAssigned;
 	FItemEquipped OnItemEquipped;
@@ -76,7 +78,6 @@ protected:
 	void SetPendingItemInGrid(UInv_InventoryItem* Item, const int32 GridIndex);
 	void RemoveAllItemFromGrid();
 
-	virtual TScriptInterface<IInv_ItemListInterface> GetGridInventoryInterface() const;
 	virtual UInv_SlottedItem* FindSlottedItem(const UInv_InventoryItem* Item) const;
 
 	virtual bool IsItemCategoryValidForGrid(const EInv_ItemCategory Category) const { return Category == ItemCategory; }
@@ -113,6 +114,7 @@ private:
 	bool IsUpperLeftSlot(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot) const;
 	bool DoesItemTypeMatch(const UInv_InventoryItem* SubItem, const FGameplayTag& ItemType) const;
 	bool IsInGridBounds(const int32 StartIndex, const FIntPoint& ItemDimensions) const;
+	void MoveHoverItemFromOneGridToAnother(const UInv_InventoryGrid* InventoryGrid, int32 GridIndex) const;
 
 	FIntPoint GetItemDimensions(const FInv_ItemManifest& Manifest) const;
 	bool CheckSlotConstraints(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot,

@@ -245,9 +245,11 @@ void UInv_SpatialInventory::EquippedGridSlotClicked(UInv_EquippedGridSlot* GridS
 	UInv_InventoryComponent* InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
 	check(InventoryComponent);
 
-	InventoryComponent->Server_EquipSlotClicked(HoverItem->GetInventoryItem(), nullptr);
-
-	HoverItem->GetOwningGrid()->RemoveItem(HoverItem->GetInventoryItem());
+	InventoryComponent->Server_EquipSlotClicked(HoverItem->GetOwningGrid()->GetGridInventoryInterface(), HoverItem->GetInventoryItem(), nullptr);
+	if(HoverItem->GetOwningGrid()->GetGridInventoryInterface() == InventoryComponent)
+	{
+		HoverItem->GetOwningGrid()->RemoveItem(HoverItem->GetInventoryItem());
+	}
 
 	if(GetOwningPlayer()->GetNetMode() != NM_DedicatedServer)
 	{
@@ -264,20 +266,21 @@ void UInv_SpatialInventory::EquippedSlottedItemClicked(UInv_EquippedSlottedItem*
 
 	if (UInv_WidgetUtils::IsLeftClick(MouseEvent))
 	{
-		UInv_InventoryItem* ItemToEquip = IsValid(GetHoverItem()) ? GetHoverItem()->GetInventoryItem() : nullptr;
+		//TODO:: Implement left click functionality for weapons swap
+		/*UInv_InventoryItem* ItemToEquip = IsValid(GetHoverItem()) ? GetHoverItem()->GetInventoryItem() : nullptr;
 		UInv_InventoryItem* ItemToUnEquip = SlottedItem->GetInventoryItem();
 
 		UInv_EquippedGridSlot* EquippedGridSlot = FindSlotWithEquippedItem(ItemToUnEquip);
 
 		ClearSlotOfItem(EquippedGridSlot);
 
-		Grid_Equippables->AssignHoverItem(ItemToUnEquip);
-
 		RemoveEquippedSlottedItem(SlottedItem);
 
 		MakeEquippedSlottedItem(SlottedItem, EquippedGridSlot, ItemToEquip);
 
-		BroadcastSlotClickedDelegates(ItemToEquip, ItemToUnEquip);
+		BroadcastSlotClickedDelegates(GetHoverItem()->GetOwningGrid()->GetGridInventoryInterface(), ItemToEquip, ItemToUnEquip);
+
+		GetHoverItem()->GetOwningGrid()->ClearHoverItem();*/
 	}
 	else
 	{
@@ -407,13 +410,13 @@ void UInv_SpatialInventory::MakeEquippedSlottedItem(const UInv_EquippedSlottedIt
 	EquippedGridSlot->SetEquippedSlottedItem(SlottedItem);
 }
 
-void UInv_SpatialInventory::BroadcastSlotClickedDelegates(UInv_InventoryItem* ItemToEquip,
+void UInv_SpatialInventory::BroadcastSlotClickedDelegates(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* ItemToEquip,
 	UInv_InventoryItem* ItemToUnEquip) const
 {
 	UInv_InventoryComponent* InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
 	check(InventoryComponent);
 
-	InventoryComponent->Server_EquipSlotClicked(ItemToEquip, ItemToUnEquip);
+	InventoryComponent->Server_EquipSlotClicked(SourceInventory, ItemToEquip, ItemToUnEquip);
 
 	if(GetOwningPlayer()->GetNetMode() != NM_DedicatedServer)
 	{

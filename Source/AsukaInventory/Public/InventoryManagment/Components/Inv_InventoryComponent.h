@@ -67,7 +67,7 @@ public:
 
 
 	UFUNCTION(Server, Reliable)
-	void Server_EquipSlotClicked(UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
+	void Server_EquipSlotClicked(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_EquipSlotClicked(UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
 

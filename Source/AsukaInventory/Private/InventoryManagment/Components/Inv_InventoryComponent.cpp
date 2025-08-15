@@ -298,9 +298,17 @@ void UInv_InventoryComponent::Server_ConsumeItem_Implementation(UInv_InventoryIt
 	}
 }
 
-void UInv_InventoryComponent::Server_EquipSlotClicked_Implementation(UInv_InventoryItem* ItemToEquip,
+void UInv_InventoryComponent::Server_EquipSlotClicked_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* ItemToEquip,
 	UInv_InventoryItem* ItemToUnEquip)
 {
+	if(SourceInventory != this)
+	{
+		Server_RemoveItem(SourceInventory, ItemToEquip);
+		if(IsValid(ItemToUnEquip))
+		{
+			Server_AddNewItem(this, SourceInventory, ItemToUnEquip, -1, ItemToEquip->GetItemIndex());
+		}
+	}
 	Multicast_EquipSlotClicked(ItemToEquip, ItemToUnEquip);
 }
 

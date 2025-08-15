@@ -564,8 +564,33 @@ bool UInv_InventoryGrid::IsInGridBounds(const int32 StartIndex, const FIntPoint&
 	return EndColumn <= Columns && EndRow <= Rows;
 }
 
+void UInv_InventoryGrid::MoveHoverItemFromOneGridToAnother(const UInv_InventoryGrid* InventoryGrid, const int32 GridIndex) const
+{
+	//Simple move should be called in parent
+	if (InventoryGrid == this)
+	{
+		if (const auto InventoryInterface = GetGridInventoryInterface())
+		{
+			InventoryComponent->Server_ChangeItemGridIndex(InventoryInterface,
+			                                               GetHoverItem()->GetInventoryItem(), GridIndex);
+		}
+	}
+	else
+	{
+		const auto InventoryInterface = GetGridInventoryInterface();
+		const auto HoverItemGridInterface = GetHoverItem()->GetOwningGrid()->GetGridInventoryInterface();
+		if (InventoryInterface && HoverItemGridInterface)
+		{
+			InventoryComponent->Server_AddNewItemByItem(InventoryInterface,
+			                                            GetHoverItem()->GetInventoryItem(), GetHoverItem()->GetStackCount(), GridIndex);
+			InventoryComponent->Server_RemoveItem(HoverItemGridInterface,
+			                                      GetHoverItem()->GetInventoryItem());
+		}
+	}
+}
+
 void UInv_InventoryGrid::DropHoverItemInGrid(UInv_InventoryGrid* InventoryGrid,
-	const int32 GridIndex) const
+                                             const int32 GridIndex) const
 {
 	if (!IsValid(InventoryGrid)) return;
 	if (const auto SlottedItem = InventoryGrid->FindSlottedItem(GetHoverItem()->GetInventoryItem()))
@@ -584,34 +609,8 @@ void UInv_InventoryGrid::DropHoverItemInGrid(UInv_InventoryGrid* InventoryGrid,
 				return;
 			}
 		}
-
-		//Simple move should be called in parent
-		if (InventoryGrid == this)
-		{
-			if (const auto InventoryInterface = GetGridInventoryInterface())
-			{
-				InventoryComponent->Server_ChangeItemGridIndex(InventoryInterface,
-					GetHoverItem()->GetInventoryItem(), GridIndex);
-			}
-		}
-		else
-		{
-			const auto InventoryInterface = GetGridInventoryInterface();
-			const auto HoverItemGridInterface = GetHoverItem()->GetOwningGrid()->GetGridInventoryInterface();
-			if (InventoryInterface && HoverItemGridInterface)
-			{
-				InventoryComponent->Server_AddNewItemByItem(InventoryInterface,
-					GetHoverItem()->GetInventoryItem(), GetHoverItem()->GetStackCount(), GridIndex);
-				InventoryComponent->Server_RemoveItem(HoverItemGridInterface,
-					GetHoverItem()->GetInventoryItem());
-			}
-		}
 	}
-	else
-	{
-		GetHoverItem()->GetInventoryItem()->SetItemIndex(GridIndex);
-		InventoryGrid->AddItem(GetHoverItem()->GetInventoryItem());
-	}
+	MoveHoverItemFromOneGridToAnother(InventoryGrid, GridIndex);
 }
 
 FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const FInv_ItemManifest& Manifest, const int32 StackAmountOverride, const int32 GridIndex)

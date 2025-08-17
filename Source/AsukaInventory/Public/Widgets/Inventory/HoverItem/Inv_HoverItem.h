@@ -6,6 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "Blueprint/UserWidget.h"
 #include <Types/Inv_GridTypes.h>
+
 #include "Inv_HoverItem.generated.h"
 
 class UInv_InventoryGrid;
@@ -13,6 +14,8 @@ struct FGameplayTag;
 class UTextBlock;
 class UInv_InventoryItem;
 class UImage;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHoverItemDropped, UInv_InventoryItem*, Item);
 /**
  * 
  */
@@ -39,18 +42,21 @@ public:
 	void SetOwningGrid(UInv_InventoryGrid* Grid);
 	UInv_InventoryGrid* GetOwningGrid() const;
 
+	FHoverItemDropped OnHoverItemPutDown;
+	FHoverItemDropped OnHoverItemDropped;
+
 private:
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UImage> Image_Icon;
+	TObjectPtr<UImage> Image_Icon{ nullptr };
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> Text_StackCount;
+	TObjectPtr<UTextBlock> Text_StackCount{ nullptr };
 
 	int32 PreviousGridIndex;
 	FIntPoint GridDimensions;
-	TWeakObjectPtr<UInv_InventoryItem> InventoryItem;
+	TWeakObjectPtr<UInv_InventoryItem> InventoryItem {nullptr};
 	bool bIsStackable{ false };
 	int32 StackCount {0};
-	TWeakObjectPtr<UInv_InventoryGrid> OwningGrid;
+	TWeakObjectPtr<UInv_InventoryGrid> OwningGrid {nullptr};
 };

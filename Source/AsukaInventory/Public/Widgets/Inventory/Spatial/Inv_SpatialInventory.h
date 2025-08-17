@@ -6,6 +6,7 @@
 #include "Widgets/Inventory/Base/Inv_InventoryBase.h"
 #include "Inv_SpatialInventory.generated.h"
 
+class IInv_ItemListInterface;
 class UInv_ExternalInventoryComponent;
 class UInv_LootInventoryGrid;
 class UInv_EquippedSlottedItem;
@@ -25,7 +26,7 @@ class ASUKAINVENTORY_API UInv_SpatialInventory : public UInv_InventoryBase
 	GENERATED_BODY()
 public:
 	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_ItemComponent* ItemComponent) const override;
-	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride = -1, const int32 GridIndex = 1, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None) const override;
+	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride = -1, const int32 GridIndex = -1, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None) const override;
 	virtual void NativeOnInitialized() override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
@@ -41,6 +42,9 @@ public:
 	virtual void ShowInventoryCursor() override;
 	virtual void HideInventoryCursor() override;
 
+	UFUNCTION()
+	void EquippedSlottedItemClicked(UInv_EquippedSlottedItem* SlottedItem, const FPointerEvent& MouseEvent);
+
 private:
 
 	void DisableButton(UButton* Button) const;
@@ -52,11 +56,6 @@ private:
 	bool CanEquipHoverItem(const UInv_EquippedGridSlot* EquippedGridSlot,const FGameplayTag& EquipmentTypeTag ) const;
 	UInv_EquippedGridSlot* FindSlotWithEquippedItem(UInv_InventoryItem* EquippedItem) const;
 	UInv_EquippedGridSlot* FindSlotByEquippedType(const FGameplayTag& EquipmentTypeTag) const;
-	void ClearSlotOfItem(UInv_EquippedGridSlot* EquippedGridSlot);
-	void RemoveEquippedSlottedItem(UInv_EquippedSlottedItem* EquippedSlottedItem);
-
-	void MakeEquippedSlottedItem(const UInv_EquippedSlottedItem* EquippedSlottedItem, UInv_EquippedGridSlot* EquippedGridSlot, UInv_InventoryItem* ItemToEquip);
-	void BroadcastSlotClickedDelegates(UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip) const;
 
 	UFUNCTION()
 	void ShowEquippables();
@@ -66,11 +65,12 @@ private:
 	void ShowCraftables();
 
 	UFUNCTION()
+	void EquipmentPutDownInGrid(UInv_InventoryItem* Item);
+
+	UFUNCTION()
 	void EquippedGridSlotClicked(UInv_EquippedGridSlot* GridSlot, const FGameplayTag& EquipmentTypeTag);
 	UFUNCTION()
-	void EquippedSlottedItemClicked(UInv_EquippedSlottedItem* SlottedItem, const FPointerEvent& MouseEvent);
-	UFUNCTION()
-	void GridEquippedItemClicked(UInv_InventoryItem* Item, const int32 GridIndex);
+	void GridEquippedItemClicked(UInv_InventoryItem* Item, const int32 GridIndex, UInv_InventoryGrid* OwningGrid);
 	UFUNCTION()
 	void HoverItemAssigned(const UInv_InventoryItem* SlottedItem);
 	UFUNCTION()

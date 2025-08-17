@@ -5,6 +5,7 @@
 
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
+#include "Items/Inv_InventoryItem.h"
 #include "Net/UnrealNetwork.h"
 #include "Widgets/Inventory/Spatial/Inv_SpatialInventory.h"
 
@@ -43,7 +44,8 @@ void UInv_ExternalInventoryComponent::OpenItemsContainer(APlayerController* Play
 
 void UInv_ExternalInventoryComponent::Server_AddNewItem_Implementation(const FPrimaryAssetId StaticItemManifestID)
 {
-	InventoryList.AddEntry(this, StaticItemManifestID);
+	FInv_ItemAddingOptions NewItemAddingOptions;
+	InventoryList.AddEntry(this, StaticItemManifestID, NewItemAddingOptions);
 }
 
 void UInv_ExternalInventoryComponent::AddRepSubObj(UObject* SubObj)
@@ -64,15 +66,15 @@ void UInv_ExternalInventoryComponent::RemoveItemFromList_Implementation(UInv_Inv
 UInv_InventoryItem* UInv_ExternalInventoryComponent::AddItemToList_Implementation(
 	const FPrimaryAssetId& StaticItemManifestID,
 	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments,
-	const int32 GridIndex)
+	const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
-	return InventoryList.AddEntry(this, StaticItemManifestID, DynamicFragments, GridIndex);
+	return InventoryList.AddEntry(this, StaticItemManifestID, NewItemAddingOptions, DynamicFragments);
 }
 
 void UInv_ExternalInventoryComponent::ChangeItemGridIndex_Implementation(UInv_InventoryItem* Item,
-	const int32 NewGridIndex)
+	const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
-	InventoryList.ChangeEntryGridIndex(Item, NewGridIndex);
+	InventoryList.ChangeEntryGridIndex(Item, NewItemAddingOptions.GridIndex, NewItemAddingOptions.GridEntityTag);
 }
 
 void UInv_ExternalInventoryComponent::MarkItemDirty_Implementation(UInv_InventoryItem* Item)

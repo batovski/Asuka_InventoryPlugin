@@ -70,8 +70,24 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 	return NewEntry.Item;
 }
 
+UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_InventoryItem* Item)
+{
+	check(OwnerComponent)
+	AActor* OwnerActor = OwnerComponent->GetOwner();
+	check(OwnerActor->HasAuthority());
+
+	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
+	NewEntry.Item = Item;
+	if(IInv_ItemListInterface* ListInterface = Cast<IInv_ItemListInterface>(OwnerComponent))
+	{
+		ListInterface->AddRepSubObj(NewEntry.Item);
+	}
+	MarkItemDirty(NewEntry);
+	return NewEntry.Item;
+}
+
 UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID,
-	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const int32 GridIndex)
+                                                      const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
 {
 	check(OwnerComponent)
 	AActor* OwnerActor = OwnerComponent->GetOwner();
@@ -79,13 +95,14 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComp
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, ExternalComponent, DynamicFragments);
-	NewEntry.Item->SetItemIndex(GridIndex);
+	NewEntry.Item->SetItemIndex(NewItemAddingOptions.GridIndex);
+	NewEntry.Item->SetOwningGridEntityTag(NewItemAddingOptions.GridEntityTag);
 	ExternalComponent->AddRepSubObj(NewEntry.Item);
 
 	MarkItemDirty(NewEntry);
 	return NewEntry.Item;
 }
-UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const int32 GridIndex)
+UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID, const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
 {
 	check(OwnerComponent);
 	AActor* OwnerActor = OwnerComponent->GetOwner();
@@ -95,15 +112,20 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& Sta
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, IC, DynamicFragments);
-	NewEntry.Item->SetItemIndex(GridIndex);
+	NewEntry.Item->SetItemIndex(NewItemAddingOptions.GridIndex);
+	NewEntry.Item->SetOwningGridEntityTag(NewItemAddingOptions.GridEntityTag);
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
 
 	return NewEntry.Item;
 }
 
-bool FInv_InventoryFastArray::ChangeEntryGridIndex(UInv_InventoryItem* Item, const int32 NewGridIndex)
+bool FInv_InventoryFastArray::ChangeEntryGridIndex(UInv_InventoryItem* Item, const int32 NewGridIndex, const FGameplayTag& NewGameplayTag)
 {
+	check(OwnerComponent);
+	AActor* OwnerActor = OwnerComponent->GetOwner();
+	check(OwnerActor->HasAuthority());
+
 	FInv_InventoryEntry* FoundEntry = Entries.FindByPredicate([Item](const FInv_InventoryEntry& Entry)
 	{
 		return Entry.Item == Item;
@@ -113,12 +135,18 @@ bool FInv_InventoryFastArray::ChangeEntryGridIndex(UInv_InventoryItem* Item, con
 		return false;
 	}
 	FoundEntry->Item->SetItemIndex(NewGridIndex);
+	if (NewGameplayTag != FGameplayTag::EmptyTag)
+		FoundEntry->Item->SetOwningGridEntityTag(NewGameplayTag);
 	MarkItemDirty(*FoundEntry);
 	return true;
 }
 
 bool FInv_InventoryFastArray::MarkEntryDirty(UInv_InventoryItem* Item)
 {
+	check(OwnerComponent);
+	AActor* OwnerActor = OwnerComponent->GetOwner();
+	check(OwnerActor->HasAuthority());
+
 	FInv_InventoryEntry* FoundEntry = Entries.FindByPredicate([Item](const FInv_InventoryEntry& Entry)
 		{
 			return Entry.Item == Item;
@@ -133,6 +161,10 @@ bool FInv_InventoryFastArray::MarkEntryDirty(UInv_InventoryItem* Item)
 
 void FInv_InventoryFastArray::RemoveEntry(UInv_InventoryItem* Item)
 {
+	check(OwnerComponent);
+	AActor* OwnerActor = OwnerComponent->GetOwner();
+	check(OwnerActor->HasAuthority());
+
 	for (auto EntryIt = Entries.CreateIterator(); EntryIt; ++EntryIt)
 	{
 		if (EntryIt->Item == Item)

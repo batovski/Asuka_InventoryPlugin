@@ -8,6 +8,18 @@
 #include "StructUtils/InstancedStruct.h"
 #include "Inv_InventoryItem.generated.h"
 
+USTRUCT(BlueprintType)
+struct FInv_ItemAddingOptions
+{
+	GENERATED_BODY()
+	FInv_ItemAddingOptions() {};
+	UPROPERTY()
+	int32 StackCount { -1 };
+	UPROPERTY()
+	int32 GridIndex{ INDEX_NONE };
+	UPROPERTY()
+	FGameplayTag GridEntityTag { FGameplayTag::EmptyTag };
+};
 
 class UInv_ItemDataAsset;
 /**
@@ -26,6 +38,9 @@ public:
 	void LoadStaticItemManifest();
 	const FInv_ItemManifest& GetItemManifest() const;
 	FInv_ItemManifest& GetItemManifestMutable() { return StaticItemManifest.GetMutable<FInv_ItemManifest>();}
+
+	const FGameplayTag& GetOwningGridEntityTag() const { return OwningGridEntityTag; }
+	void SetOwningGridEntityTag(const FGameplayTag& NewTag);
 
 	void SetItemIndex(const int32 Index) { ItemIndex = Index; }
 	int32 GetItemIndex() const { return ItemIndex; }
@@ -61,6 +76,8 @@ private:
 	FInstancedStruct StaticItemManifest;
 	UPROPERTY(Replicated)
 	int32 ItemIndex{ -1 };
+	UPROPERTY(Replicated)
+	FGameplayTag OwningGridEntityTag{};
 };
 
 

@@ -10,6 +10,7 @@
 #include "Items/Inv_InventoryItem.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
 #include "Widgets/Inventory/Base/Inv_InventoryBase.h"
+#include "Widgets/Inventory/Spatial/Inv_GridsTags.h"
 
 UInv_InventoryComponent* UInv_InventoryStatics::GetInventoryComponent(const APlayerController* PlayerController)
 {
@@ -174,7 +175,10 @@ UInv_ExternalInventoryComponent* UInv_InventoryStatics::CreateExternalInventoryC
 	{
 		if (IsValid(SourceItem))
 		{
-			UInv_ExternalInventoryComponent::Execute_AddItemToList(ExternalInventoryComponent, SourceItem->GetStaticItemManifestAssetId(), SourceItem->GetDynamicItemFragments(), SourceItem->GetItemIndex());
+			FInv_ItemAddingOptions ItemToEquipOptions;
+			ItemToEquipOptions.GridIndex = SourceItem->GetItemIndex();
+			ItemToEquipOptions.GridEntityTag = InventoryGrid::External::LootGrid;
+			UInv_ExternalInventoryComponent::Execute_AddItemToList(ExternalInventoryComponent, SourceItem->GetStaticItemManifestAssetId(), SourceItem->GetDynamicItemFragments(), ItemToEquipOptions);
 		}
 	}
 

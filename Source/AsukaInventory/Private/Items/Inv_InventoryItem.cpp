@@ -13,6 +13,8 @@ void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(ThisClass, DynamicItemFragments);
 	DOREPLIFETIME(ThisClass, StaticItemManifestAssetId);
 	DOREPLIFETIME(ThisClass, ItemIndex);
+	// Replicate OwningGridEntityTag with condition to optimize network traffic
+	DOREPLIFETIME_CONDITION(ThisClass, OwningGridEntityTag, COND_None);
 }
 
 void UInv_InventoryItem::SetDynamicItemFragments(const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments)
@@ -37,6 +39,11 @@ void UInv_InventoryItem::LoadStaticItemManifest()
 const FInv_ItemManifest& UInv_InventoryItem::GetItemManifest() const
 {
 	return StaticItemManifest.Get<FInv_ItemManifest>(); 
+}
+
+void UInv_InventoryItem::SetOwningGridEntityTag(const FGameplayTag& NewTag)
+{
+	OwningGridEntityTag = FGameplayTag(NewTag);
 }
 
 bool UInv_InventoryItem::IsStackable() const

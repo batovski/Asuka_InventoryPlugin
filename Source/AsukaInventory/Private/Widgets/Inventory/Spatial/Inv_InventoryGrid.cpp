@@ -571,8 +571,11 @@ void UInv_InventoryGrid::MoveHoverItemFromOneGridToAnother(const UInv_InventoryG
 	{
 		if (const auto InventoryInterface = GetGridInventoryInterface())
 		{
+			FInv_ItemAddingOptions NewItemAddingOptions;
+			NewItemAddingOptions.GridIndex = GridIndex;
+			NewItemAddingOptions.GridEntityTag = GetOwningGridTag();
 			InventoryComponent->Server_ChangeItemGridIndex(InventoryInterface,
-			                                               GetHoverItem()->GetInventoryItem(), GridIndex);
+			                                               GetHoverItem()->GetInventoryItem(), NewItemAddingOptions);
 		}
 	}
 	else
@@ -581,10 +584,12 @@ void UInv_InventoryGrid::MoveHoverItemFromOneGridToAnother(const UInv_InventoryG
 		const auto HoverItemGridInterface = GetHoverItem()->GetOwningGrid()->GetGridInventoryInterface();
 		if (InventoryInterface && HoverItemGridInterface)
 		{
-			InventoryComponent->Server_AddNewItemByItem(InventoryInterface,
-			                                            GetHoverItem()->GetInventoryItem(), GetHoverItem()->GetStackCount(), GridIndex);
-			InventoryComponent->Server_RemoveItem(HoverItemGridInterface,
-			                                      GetHoverItem()->GetInventoryItem());
+			FInv_ItemAddingOptions NewItemAddingOptions;
+			NewItemAddingOptions.StackCount = GetHoverItem()->GetStackCount();
+			NewItemAddingOptions.GridIndex = GridIndex;
+			NewItemAddingOptions.GridEntityTag = GetOwningGridTag();
+			InventoryComponent->Server_AddNewItemByItem(InventoryInterface, GetHoverItem()->GetInventoryItem(), NewItemAddingOptions);
+			InventoryComponent->Server_RemoveItem(HoverItemGridInterface, GetHoverItem()->GetInventoryItem());
 		}
 	}
 }
@@ -603,7 +608,11 @@ void UInv_InventoryGrid::DropHoverItemInGrid(UInv_InventoryGrid* InventoryGrid,
 				InventoryComponent->Server_UpdateItemStackCount(SlottedItem->GetInventoryItem(), StackableFragment->GetStackCount() - GetHoverItem()->GetStackCount());
 				if (const auto InventoryInterface = GetGridInventoryInterface())
 				{
-					InventoryComponent->Server_AddNewItemByItem(InventoryInterface, SlottedItem->GetInventoryItem(), GetHoverItem()->GetStackCount(), GridIndex);
+					FInv_ItemAddingOptions NewItemAddingOptions;
+					NewItemAddingOptions.StackCount = GetHoverItem()->GetStackCount();
+					NewItemAddingOptions.GridIndex = GridIndex;
+					NewItemAddingOptions.GridEntityTag = GetOwningGridTag();
+					InventoryComponent->Server_AddNewItemByItem(InventoryInterface, SlottedItem->GetInventoryItem(), NewItemAddingOptions);
 					InventoryComponent->Server_MarkItemDirty(InventoryGrid->GetGridInventoryInterface(), GetHoverItem()->GetInventoryItem());
 				}
 				return;
@@ -842,7 +851,7 @@ void UInv_InventoryGrid::OnGridSlotClicked(int32 GridIndex, const FPointerEvent&
 		OnSlottedItemClicked(CurrentQueryResult.UpperLeftIndex, MouseEvent);
 		return;
 	}
-
+	if (!CurrentQueryResult.bHasSpace) return;
 	auto GridSlot = GridSlots[ItemDropIndex];
 	if(!GridSlot->GetInventoryItem().IsValid())
 	{
@@ -855,7 +864,8 @@ void UInv_InventoryGrid::PutDownOnIndex(const int32 GridIndex)
 {
 	if (!IsItemCategoryValidForGrid(GetHoverItem()->GetInventoryItem()->GetItemManifest().GetItemCategory())) return;
 	DropHoverItemInGrid(GetHoverItem()->GetOwningGrid(), GridIndex);
-	
+
+	GetHoverItem()->OnHoverItemPutDown.Broadcast(GetHoverItem()->GetInventoryItem());
 	ClearHoverItem();
 }
 
@@ -954,7 +964,7 @@ void UInv_InventoryGrid::OnPopUpMenuEquip(int32 Index)
 {
 	UInv_InventoryItem* ClickedInventoryItem = GridSlots[Index]->GetInventoryItem().Get();
 	if (!IsValid(ClickedInventoryItem)) return;
-	OnItemEquipped.ExecuteIfBound(ClickedInventoryItem, Index);
+	OnItemEquipped.ExecuteIfBound(ClickedInventoryItem, Index, this);
 }
 
 void UInv_InventoryGrid::OnInventoryMenuToggled(const bool IsOpen)
@@ -967,7 +977,8 @@ void UInv_InventoryGrid::OnInventoryMenuToggled(const bool IsOpen)
 
 bool UInv_InventoryGrid::MatchesCategory(const UInv_InventoryItem* Item) const
 {
-	return Item && Item->GetItemManifest().GetItemCategory() == ItemCategory;
+	return Item && Item->GetItemManifest().GetItemCategory() == ItemCategory &&
+		(Item->GetOwningGridEntityTag() == GetOwningGridTag() || Item->GetOwningGridEntityTag() == FGameplayTag::EmptyTag);
 }
 
 bool UInv_InventoryGrid::IsSameStackable(const UInv_InventoryItem* ClickedInventoryItem) const
@@ -1142,7 +1153,7 @@ void UInv_InventoryGrid::DropHoverItem()
 	if (!IsValid(GetHoverItem()->GetInventoryItem())) return;
 
 	InventoryComponent->Server_DropItem(GetHoverItem()->GetInventoryItem(),GetHoverItem()->GetStackCount());
-
+	GetHoverItem()->OnHoverItemDropped.Broadcast(GetHoverItem()->GetInventoryItem());
 	ClearHoverItem();
 }
 

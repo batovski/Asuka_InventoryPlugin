@@ -10,6 +10,7 @@
 #include "StructUtils/InstancedStruct.h"
 #include "Inv_FastArray.generated.h"
 
+struct FInv_ItemAddingOptions;
 class UInv_ExternalInventoryComponent;
 class UInv_ItemComponent;
 class UInv_InventoryComponent;
@@ -57,11 +58,11 @@ public:
 	}
 
 	UInv_InventoryItem* AddEntry(UInv_ItemComponent* ItemComponent);
+	UInv_InventoryItem* AddEntry(UInv_InventoryItem* Item);
 	UInv_InventoryItem* AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID,
-		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {}, const int32 GridIndex = -1);
-	UInv_InventoryItem* AddEntry(const FPrimaryAssetId& StaticItemManifestID,
-		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {}, const int32 GridIndex = -1);
-	bool ChangeEntryGridIndex(UInv_InventoryItem* Item, const int32 NewGridIndex);
+		const FInv_ItemAddingOptions& NewItemAddingOptions ,const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
+	UInv_InventoryItem* AddEntry(const FPrimaryAssetId& StaticItemManifestID, const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
+	bool ChangeEntryGridIndex(UInv_InventoryItem* Item, const int32 NewGridIndex, const FGameplayTag& NewGameplayTag = {});
 	bool MarkEntryDirty(UInv_InventoryItem* Item);
 
 	void RemoveEntry(UInv_InventoryItem* Item);
@@ -106,9 +107,12 @@ public:
 	void RemoveItemFromList(UInv_InventoryItem* Item);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, meta = (AutoCreateRefTerm = "DynamicFragments"), Category = "Interface")
 	UInv_InventoryItem* AddItemToList(const FPrimaryAssetId& StaticItemManifestID,
-		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const int32 GridIndex);
+		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, meta = (AutoCreateRefTerm = "DynamicFragments"), Category = "Interface")
+	UInv_InventoryItem* MoveItemToList(UInv_InventoryItem* Item);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
-	void ChangeItemGridIndex(UInv_InventoryItem* Item, const int32 NewGridIndex);
+	void ChangeItemGridIndex(UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
 	void MarkItemDirty(UInv_InventoryItem* Item);
+	virtual void AddRepSubObj(UObject* SubObj) = 0;
 };

@@ -42,6 +42,9 @@ public:
 	virtual void ShowInventoryCursor() override;
 	virtual void HideInventoryCursor() override;
 
+	UFUNCTION()
+	void EquippedSlottedItemClicked(UInv_EquippedSlottedItem* SlottedItem, const FPointerEvent& MouseEvent);
+
 private:
 
 	void DisableButton(UButton* Button) const;
@@ -53,11 +56,6 @@ private:
 	bool CanEquipHoverItem(const UInv_EquippedGridSlot* EquippedGridSlot,const FGameplayTag& EquipmentTypeTag ) const;
 	UInv_EquippedGridSlot* FindSlotWithEquippedItem(UInv_InventoryItem* EquippedItem) const;
 	UInv_EquippedGridSlot* FindSlotByEquippedType(const FGameplayTag& EquipmentTypeTag) const;
-	void ClearSlotOfItem(UInv_EquippedGridSlot* EquippedGridSlot);
-	void RemoveEquippedSlottedItem(UInv_EquippedSlottedItem* EquippedSlottedItem);
-
-	void MakeEquippedSlottedItem(const UInv_EquippedSlottedItem* EquippedSlottedItem, UInv_EquippedGridSlot* EquippedGridSlot, UInv_InventoryItem* ItemToEquip);
-	void BroadcastSlotClickedDelegates(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip) const;
 
 	UFUNCTION()
 	void ShowEquippables();
@@ -67,11 +65,12 @@ private:
 	void ShowCraftables();
 
 	UFUNCTION()
+	void EquipmentPutDownInGrid(UInv_InventoryItem* Item);
+
+	UFUNCTION()
 	void EquippedGridSlotClicked(UInv_EquippedGridSlot* GridSlot, const FGameplayTag& EquipmentTypeTag);
 	UFUNCTION()
-	void EquippedSlottedItemClicked(UInv_EquippedSlottedItem* SlottedItem, const FPointerEvent& MouseEvent);
-	UFUNCTION()
-	void GridEquippedItemClicked(UInv_InventoryItem* Item, const int32 GridIndex);
+	void GridEquippedItemClicked(UInv_InventoryItem* Item, const int32 GridIndex, UInv_InventoryGrid* OwningGrid);
 	UFUNCTION()
 	void HoverItemAssigned(const UInv_InventoryItem* SlottedItem);
 	UFUNCTION()

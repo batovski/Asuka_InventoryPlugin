@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Blueprint/UserWidget.h"
 #include "Types/Inv_GridTypes.h"
 #include "Inv_InventoryGrid.generated.h"
@@ -27,7 +28,7 @@ class UInv_GridSlot;
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FHoverItemAssigned, const UInv_InventoryItem*, Item);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FHoverItemUnAssigned, const UInv_InventoryItem*, Item);
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FItemEquipped, UInv_InventoryItem*, Item,const int32, GridIndex);
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(FItemEquipped, UInv_InventoryItem*, Item, const int32, GridIndex, UInv_InventoryGrid*, OwningGrid);
 
 UCLASS()
 class ASUKAINVENTORY_API UInv_InventoryGrid : public UUserWidget
@@ -63,6 +64,7 @@ public:
 	void OnHide();
 
 	virtual TScriptInterface<IInv_ItemListInterface> GetGridInventoryInterface() const;
+	const FGameplayTag& GetOwningGridTag() const { return GridEntityTag; }
 
 	FHoverItemAssigned OnHoverItemAssigned;
 	FHoverItemUnAssigned OnHoverItemUnAssigned;
@@ -214,6 +216,8 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FVector2D ItemPopUpOffset;
+	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (Categories = "InventoryGrid"))
+	FGameplayTag GridEntityTag;
 
 	TWeakObjectPtr <UCanvasPanel> OwningCanvasPanel;
 

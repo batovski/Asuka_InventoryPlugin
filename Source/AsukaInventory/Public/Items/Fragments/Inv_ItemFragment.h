@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "GameplayAbilitySpecHandle.h"
 #include "GameplayTagContainer.h"
 #include "Inv_FragmentTags.h"
@@ -10,6 +11,7 @@
 #include "Inv_ItemFragment.generated.h"
 
 
+class UGameplayEffect;
 class UGameplayAbility;
 class AInv_EquipActor;
 struct FInv_ConsumeModifier;
@@ -110,7 +112,6 @@ struct FInv_InventoryItemFragmentAbstract : public FInv_ItemFragment
 	GENERATED_BODY()
 
 	virtual void Assimilate(UInv_CompositeBase* Composite) const;
-
 protected:
 	virtual bool MatchesWidgetTag(const UInv_CompositeBase* Composite) const;
 };
@@ -141,7 +142,7 @@ struct FInv_LabeledNumberFragment : public FInv_UIElementFragmentAbstract
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	FText Text_Label{};
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-	float Value;
+	float Value{ 0.f };
 
 private:
 
@@ -255,6 +256,20 @@ struct FInv_GameplayAbilitiesModifier : public FInv_EquipModifier
 	TArray<TSoftClassPtr<UGameplayAbility>> Abilities {};
 
 	TArray<FGameplayAbilitySpecHandle> GrantedAbilities{};
+};
+
+USTRUCT(BlueprintType)
+struct FInv_GameplayEffectsModifier : public FInv_EquipModifier
+{
+	GENERATED_BODY()
+	FInv_GameplayEffectsModifier() { FragmentTag = FragmentTags::GameplayEffectsFragment; }
+	virtual void OnEquip(APlayerController* PC) override;
+	virtual void OnUnEquip(APlayerController* PC) override;
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	TArray<TSoftClassPtr<UGameplayEffect>> Effects{};
+
+	TArray<FActiveGameplayEffectHandle> GrantedEffects{};
 };
 
 USTRUCT(BlueprintType)

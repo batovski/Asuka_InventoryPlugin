@@ -43,7 +43,6 @@ public:
 	UInv_InventoryGrid* GetOwningGrid() const;
 
 	FHoverItemDropped OnHoverItemPutDown;
-	FHoverItemDropped OnHoverItemDropped;
 
 private:
 

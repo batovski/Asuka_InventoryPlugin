@@ -176,6 +176,56 @@ void FInv_GameplayAbilitiesModifier::OnUnEquip(APlayerController* PC)
 	}
 }
 
+void FInv_GameplayEffectsModifier::OnEquip(APlayerController* PC)
+{
+	FInv_EquipModifier::OnEquip(PC);
+	if (!PC || !PC->GetPawn()) return;
+	if (EquippedActor.IsValid())
+	{
+		if(const AActor* ParentActor = EquippedActor->GetAttachParentActor())
+		{
+			if (const auto ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(ParentActor))
+			{
+				for (auto EffectClass : Effects)
+				{
+					if (EffectClass.IsValid())
+					{
+						if (TSubclassOf<UGameplayEffect> LoadedEffect = EffectClass.LoadSynchronous())
+						{
+							FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+							FGameplayEffectSpecHandle EffectSpecHandle = ASC->MakeOutgoingSpec(LoadedEffect, 1.0f, EffectContext);
+							if (EffectSpecHandle.IsValid())
+							{
+								GrantedEffects.Emplace(ASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get()));
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void FInv_GameplayEffectsModifier::OnUnEquip(APlayerController* PC)
+{
+	FInv_EquipModifier::OnUnEquip(PC);
+	if (!PC || !PC->GetPawn()) return;
+	if (EquippedActor.IsValid())
+	{
+		if (const AActor* ParentActor = EquippedActor->GetAttachParentActor())
+		{
+			if (const auto ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(ParentActor))
+			{
+				for(auto EffectHandle : GrantedEffects)
+				{
+					ASC->RemoveActiveGameplayEffect(EffectHandle);
+				}
+				GrantedEffects.Empty();
+			}
+		}
+	}
+}
+
 void FInv_EquipmentFragment::Manifest()
 {
 	FInv_InventoryItemFragmentAbstract::Manifest();

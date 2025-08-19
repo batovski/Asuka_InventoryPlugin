@@ -7,6 +7,7 @@
 #include "Inv_ItemFragment.h"
 #include "Inv_WeaponFragments.generated.h"
 
+
 USTRUCT(BlueprintType)
 struct FInv_WeaponModifier : public FInv_LabeledNumberFragment
 {

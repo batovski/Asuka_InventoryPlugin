@@ -13,8 +13,11 @@ void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(ThisClass, DynamicItemFragments);
 	DOREPLIFETIME(ThisClass, StaticItemManifestAssetId);
 	DOREPLIFETIME(ThisClass, ItemIndex);
-	// Replicate OwningGridEntityTag with condition to optimize network traffic
-	DOREPLIFETIME_CONDITION(ThisClass, OwningGridEntityTag, COND_None);
+	DOREPLIFETIME(ThisClass, OwningGridEntityTag);
+	//DOREPLIFETIME_CONDITION(ThisClass, DynamicItemFragments, COND_OwnerOnly);
+	//DOREPLIFETIME_CONDITION(ThisClass, StaticItemManifestAssetId, COND_OwnerOnly);
+	//DOREPLIFETIME_CONDITION(ThisClass, ItemIndex, COND_OwnerOnly);
+	//DOREPLIFETIME_CONDITION(ThisClass, OwningGridEntityTag, COND_OwnerOnly);
 }
 
 void UInv_InventoryItem::SetDynamicItemFragments(const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments)
@@ -33,7 +36,7 @@ void UInv_InventoryItem::LoadStaticItemManifest()
 	{
 		StaticItemManifest = FInstancedStruct::Make<FInv_ItemManifest>(UInv_InventoryStatics::GetItemManifestFromID(StaticItemManifestAssetId));
 	}
-	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(), DynamicItemFragments);
+	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(), DynamicItemFragments, this);
 }
 
 const FInv_ItemManifest& UInv_InventoryItem::GetItemManifest() const
@@ -63,7 +66,8 @@ bool UInv_InventoryItem::IsEquippable() const
 	return EquipmentFragment != nullptr;
 }
 
-void UInv_InventoryItem::UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments, TArray <TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
+void UInv_InventoryItem::UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments, TArray <TInstancedStruct<FInv_ItemFragment>>& DynamicFragments,
+	const UInv_InventoryItem* Item)
 {
 	//TODO:: OPTIMIZE THIS with hashmap if fragments are unique 
 	for (TInstancedStruct<FInv_ItemFragment>& DynamicFragment : DynamicFragments)
@@ -73,6 +77,11 @@ void UInv_InventoryItem::UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFra
 			if (StaticItemFragment.Get().IsDynamicFragment() && StaticItemFragment.Get().GetFragmentTag().MatchesTagExact(DynamicFragment.Get().GetFragmentTag()))
 			{
 				StaticItemFragment = DynamicFragment;
+				if(Item)
+				{
+					// Notify listeners about the modification
+					Item->OnItemFragmentModified.Broadcast(DynamicFragment.Get().GetFragmentTag());
+				}
 			}
 		}
 	}
@@ -80,7 +89,7 @@ void UInv_InventoryItem::UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFra
 
 void UInv_InventoryItem::OnRep_DynamicItemFragments()
 {
-	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(),DynamicItemFragments);
+	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(),DynamicItemFragments, this);
 }
 
 const TInstancedStruct<FInv_ItemFragment>* UInv_InventoryItem::GetFragmentStructByTag(const FGameplayTag& FragmentType) const

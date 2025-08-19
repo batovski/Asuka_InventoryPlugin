@@ -21,6 +21,7 @@ namespace FragmentTags
 	UE_DEFINE_GAMEPLAY_TAG(SkeltalMeshFragment, "FragmentTags.SkeltonMeshFragment")
 	UE_DEFINE_GAMEPLAY_TAG(AnimLayerFragment, "FragmentTags.AnimLayerFragment")
 	UE_DEFINE_GAMEPLAY_TAG(GameplayAbilitiesFragment, "FragmentTags.GameplayAbilitiesFragment")
+	UE_DEFINE_GAMEPLAY_TAG(GameplayEffectsFragment, "FragmentTags.GameplayEffectsFragment")
 }
 
 namespace ItemDescription

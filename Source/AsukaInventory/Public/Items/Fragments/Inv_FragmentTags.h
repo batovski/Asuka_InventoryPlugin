@@ -21,6 +21,7 @@ namespace FragmentTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SkeltalMeshFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(AnimLayerFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayAbilitiesFragment)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayEffectsFragment)
 }
 namespace ItemDescription
 {

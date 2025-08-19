@@ -25,6 +25,9 @@ class UInv_ItemDataAsset;
 /**
  * 
  */
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FItemFragmentModified, FGameplayTag, ModifiedFragment);
+
 UCLASS()
 class ASUKAINVENTORY_API UInv_InventoryItem : public UObject
 {
@@ -50,7 +53,7 @@ public:
 	bool IsStackable() const;
 	bool IsConsumable() const;
 	bool IsEquippable() const;
-	static void UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments, TArray <TInstancedStruct<FInv_ItemFragment>>& DynamicFragments);
+	static void UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments, TArray <TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const UInv_InventoryItem* Item = nullptr);
 
 	UFUNCTION()
 	void OnRep_DynamicItemFragments();
@@ -63,6 +66,9 @@ public:
 	T* GetFragmentOfTypeMutable();
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
 	T* GetFragmentOfTypeWithTag(const FGameplayTag& FragmentType);
+
+	UPROPERTY(VisibleAnywhere, BlueprintAssignable, Category = "Inventory")
+	FItemFragmentModified OnItemFragmentModified;
 
 private:
 

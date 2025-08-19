@@ -28,8 +28,14 @@ void UInv_EquippedGridSlot::NativeOnInitialized()
 	InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
 	if (InventoryComponent.IsValid())
 	{
-		InventoryComponent->OnItemEquipped.AddDynamic(this, &ThisClass::AddItem);
-		InventoryComponent->OnItemUnEquipped.AddDynamic(this, &ThisClass::RemoveItem);
+		if (!InventoryComponent->OnItemEquipped.IsAlreadyBound(this, &ThisClass::AddItem))
+		{
+			InventoryComponent->OnItemEquipped.AddDynamic(this, &ThisClass::AddItem);
+		}
+		if (!InventoryComponent->OnItemUnEquipped.IsAlreadyBound(this, &ThisClass::RemoveItem))
+		{
+			InventoryComponent->OnItemUnEquipped.AddDynamic(this, &ThisClass::RemoveItem);
+		}
 	}
 }
 
@@ -123,4 +129,6 @@ void UInv_EquippedGridSlot::RemoveEquippedSlottedItem()
 
 	SetEquippedSlottedItem(nullptr);
 	SetInventoryItem(nullptr);
+
+	UnHighlightSlot();
 }

@@ -1153,7 +1153,6 @@ void UInv_InventoryGrid::DropHoverItem()
 	if (!IsValid(GetHoverItem()->GetInventoryItem())) return;
 
 	InventoryComponent->Server_DropItem(GetHoverItem()->GetInventoryItem(),GetHoverItem()->GetStackCount());
-	GetHoverItem()->OnHoverItemDropped.Broadcast(GetHoverItem()->GetInventoryItem());
 	ClearHoverItem();
 }
 

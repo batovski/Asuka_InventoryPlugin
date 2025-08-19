@@ -214,7 +214,7 @@ void UInv_InventoryComponent::Server_DropItem_Implementation(UInv_InventoryItem*
 		InventoryList.RemoveEntry(Item);
 	}
 	if (Item->IsEquippable())
-		Multicast_EquipSlotClicked_Implementation(nullptr, Item);
+		Multicast_EquipSlotClicked(nullptr, Item);
 	SpawnDroppedItem(Item, StackCount);
 }
 

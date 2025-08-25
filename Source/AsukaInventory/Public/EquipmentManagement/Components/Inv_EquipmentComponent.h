@@ -33,6 +33,8 @@ private:
 	UFUNCTION()
 	void OnItemUnEquipped(UInv_InventoryItem* UnEquippedItem);
 	UFUNCTION()
+	void OnItemRemoved(UInv_InventoryItem* UnEquippedItem);
+	UFUNCTION()
 	void OnPossessedPawnChanged(APawn* OldPawn, APawn* NewPawn);
 
 	void InitPlayerController();

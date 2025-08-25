@@ -155,32 +155,73 @@ UInv_InventoryItem* UInv_InventoryStatics::CreateInventoryItemFromManifest(const
 	return NewItem;
 }
 
-UInv_ExternalInventoryComponent* UInv_InventoryStatics::CreateExternalInventoryComponent(UObject* WorldContextObject,
-	const UInv_InventoryComponent* InventoryComponent, const FString& PickupMessage)
+AActor* UInv_InventoryStatics::CreateExternalInventoryActor(UObject* WorldContextObject,
+	UInv_InventoryComponent* InventoryComponent, 
+    const FString& PickupMessage,
+    TSubclassOf<AActor> ActorClass,
+    const FTransform& SpawnTransform)
 {
-	if (!IsValid(InventoryComponent))
-	{
-		return nullptr;
-	}
+    if (!IsValid(InventoryComponent))
+    {
+        return nullptr;
+    }
 
-	UInv_ExternalInventoryComponent* ExternalInventoryComponent = NewObject<UInv_ExternalInventoryComponent>(WorldContextObject, UInv_ExternalInventoryComponent::StaticClass());
+    if (!ActorClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("CreateExternalInventoryComponent: ActorClass is null"));
+        return nullptr;
+    }
 
-	if(!PickupMessage.IsEmpty())
-	{
-		ExternalInventoryComponent->GetPickupMessage() = PickupMessage;
-	}
+    UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+    if (!World)
+    {
+        return nullptr;
+    }
 
-	const TArray<UInv_InventoryItem*>& SourceItems = InventoryComponent->GetInventoryList().GetAllItems();
-	for (UInv_InventoryItem* SourceItem : SourceItems)
-	{
-		if (IsValid(SourceItem))
-		{
-			FInv_ItemAddingOptions ItemToEquipOptions;
-			ItemToEquipOptions.GridIndex = SourceItem->GetItemIndex();
-			ItemToEquipOptions.GridEntityTag = InventoryGrid::External::LootGrid;
-			UInv_ExternalInventoryComponent::Execute_AddItemToList(ExternalInventoryComponent, SourceItem->GetStaticItemManifestAssetId(), SourceItem->GetDynamicItemFragments(), ItemToEquipOptions);
-		}
-	}
+    // Spawn the actor
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+    
+    AActor* SpawnedActor = World->SpawnActor<AActor>(ActorClass, SpawnTransform, SpawnParams);
+    if (!SpawnedActor)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("CreateExternalInventoryComponent: Failed to spawn actor of class %s"), 
+               ActorClass ? *ActorClass->GetName() : TEXT("NULL"));
+        return nullptr;
+    }
 
-	return ExternalInventoryComponent;
+    // Create and attach the external inventory component
+    UInv_ExternalInventoryComponent* ExternalInventoryComponent = NewObject<UInv_ExternalInventoryComponent>(
+        SpawnedActor, UInv_ExternalInventoryComponent::StaticClass());
+    
+    if (!ExternalInventoryComponent)
+    {
+        SpawnedActor->Destroy();
+        return nullptr;
+    }
+
+    // Add component to the actor
+    SpawnedActor->AddInstanceComponent(ExternalInventoryComponent);
+    ExternalInventoryComponent->RegisterComponent();
+
+    // Set pickup message if provided
+    if (!PickupMessage.IsEmpty())
+    {
+        ExternalInventoryComponent->GetPickupMessage() = PickupMessage;
+    }
+
+    // Copy items from source inventory component
+    const TArray<UInv_InventoryItem*>& SourceItems = InventoryComponent->GetInventoryList().GetAllItems();
+    for (UInv_InventoryItem* SourceItem : SourceItems)
+    {
+        if (IsValid(SourceItem))
+        {
+            FInv_ItemAddingOptions ItemToEquipOptions;
+            ItemToEquipOptions.GridIndex = INDEX_NONE;
+            ItemToEquipOptions.GridEntityTag = InventoryGrid::External::LootGrid;
+			InventoryComponent->Server_AddNewItem(InventoryComponent, ExternalInventoryComponent, SourceItem, ItemToEquipOptions);
+        }
+    }
+
+    return SpawnedActor;
 }

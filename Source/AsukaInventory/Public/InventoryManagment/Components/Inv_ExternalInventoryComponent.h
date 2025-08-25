@@ -54,7 +54,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Inventory", Replicated)
 	TArray<FPrimaryAssetId> InitialItemsIDs;
 	UPROPERTY(EditAnywhere, Category = "Inventory")
-	FString PickupMessage;
+	FString PickupMessage {"E - To loot"};
 
 	UPROPERTY(Replicated)
 	FInv_InventoryFastArray InventoryList;

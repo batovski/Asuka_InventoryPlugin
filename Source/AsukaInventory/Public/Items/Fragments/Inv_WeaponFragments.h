@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "StructUtils/InstancedStruct.h"
 #include "Inv_ItemFragment.h"
 #include "Inv_WeaponFragments.generated.h"
 
@@ -40,13 +39,6 @@ struct FInv_WeaponFragment : public FInv_InventoryItemFragmentAbstract
 	FInv_WeaponModifier AimDistance;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	FInv_WeaponModifier AimViewAngle;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-	FInv_WeaponModifier SpreadRadius;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-	FInv_WeaponModifier SpreadLineLength;
-
-
 };
 
 USTRUCT(BlueprintType)
@@ -59,4 +51,15 @@ struct FInv_WeaponAnimationsFragment : public FInv_ItemFragment
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	TSoftObjectPtr<UAnimMontage> ReloadMontage;
+};
+class UMetaSoundSource;
+USTRUCT(BlueprintType)
+struct FInv_WeaponMetaSoundsFragment : public FInv_ItemFragment
+{
+	GENERATED_BODY()
+	FInv_WeaponMetaSoundsFragment() { FragmentTag = FragmentTags::WeaponMetaSoundsFragment; }
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	TSoftObjectPtr<UMetaSoundSource> FireAudioSource;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	TSoftObjectPtr<UMetaSoundSource> ReloadAudioSource;
 };

@@ -71,7 +71,12 @@ public:
 
 	static UInv_InventoryItem* CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
 
-	static UInv_ExternalInventoryComponent* CreateExternalInventoryComponent(UObject* WorldContextObject, const UInv_InventoryComponent* InventoryComponent, const FString& PickupMessage = {});
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	static AActor* CreateExternalInventoryActor(UObject* WorldContextObject, 
+	UInv_InventoryComponent* InventoryComponent, 
+    const FString& PickupMessage,
+    TSubclassOf<AActor> ActorClass,
+    const FTransform& SpawnTransform);
 };
 
 template<typename T, typename FuncT>

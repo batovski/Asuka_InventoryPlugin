@@ -33,10 +33,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	void TryAddItemByComponent(UInv_ItemComponent* ItemComponent);
 
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
-	void TryAddItemToInventory(TScriptInterface<IInv_ItemListInterface> SourceInventory, TScriptInterface <IInv_ItemListInterface> TargetInventor,
-		UInv_InventoryItem* Item, int32 StackCount, const int32 GridIndex, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None);
-
 	UFUNCTION(Server, Reliable)
 	void Server_AddNewItemByItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions);
 
@@ -72,6 +68,9 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_EquipSlotClicked(UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
 
+	UFUNCTION(Server, Reliable)
+	void Server_AddNewItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions);
+
 	const UInv_InventoryItem* FindInventoryItem(const FGameplayTag& ItemType) const;
 
 	void ToggleInventoryMenu();
@@ -103,9 +102,6 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-
-	UFUNCTION(Server, Reliable)
-	void Server_AddNewItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions);
 
 	UFUNCTION(Server, Reliable)
 	void Server_AddStacksToItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount, int32 Remainder);

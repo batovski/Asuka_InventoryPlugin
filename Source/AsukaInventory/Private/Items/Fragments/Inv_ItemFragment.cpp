@@ -148,7 +148,9 @@ void FInv_GameplayAbilitiesModifier::OnEquip(APlayerController* PC)
 					if (AbilityClass.IsValid())
 					{
 						TSubclassOf<UGameplayAbility> LoadedAbility = AbilityClass.LoadSynchronous();
-						GrantedAbilities.Emplace(ASC->GiveAbility(ASC->BuildAbilitySpecFromClass(LoadedAbility)));
+						auto AbilitySpec = ASC->BuildAbilitySpecFromClass(LoadedAbility);
+						AbilitySpec.SourceObject = EquippedActor.Get();
+						GrantedAbilities.Emplace(ASC->GiveAbility(AbilitySpec));
 					}
 				}
 			}
@@ -193,10 +195,16 @@ void FInv_GameplayEffectsModifier::OnEquip(APlayerController* PC)
 						if (TSubclassOf<UGameplayEffect> LoadedEffect = EffectClass.LoadSynchronous())
 						{
 							FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+							// Optionally, set the source object in the context
+							EffectContext.AddSourceObject(EquippedActor.Get());
 							FGameplayEffectSpecHandle EffectSpecHandle = ASC->MakeOutgoingSpec(LoadedEffect, 1.0f, EffectContext);
 							if (EffectSpecHandle.IsValid())
 							{
-								GrantedEffects.Emplace(ASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get()));
+								auto GrantedEffect = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
+								if (GrantedEffect.IsValid())
+								{
+									GrantedEffects.Emplace(GrantedEffect);
+								}
 							}
 						}
 					}

@@ -269,6 +269,7 @@ struct FInv_GameplayEffectsModifier : public FInv_EquipModifier
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	TArray<TSoftClassPtr<UGameplayEffect>> Effects{};
 
+	UPROPERTY()
 	TArray<FActiveGameplayEffectHandle> GrantedEffects{};
 };
 

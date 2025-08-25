@@ -36,6 +36,10 @@ void UInv_EquippedGridSlot::NativeOnInitialized()
 		{
 			InventoryComponent->OnItemUnEquipped.AddDynamic(this, &ThisClass::RemoveItem);
 		}
+		if (!InventoryComponent->GetInventoryListMutable().OnItemRemoved.IsAlreadyBound(this, &ThisClass::RemoveItem))
+		{
+			InventoryComponent->GetInventoryListMutable().OnItemRemoved.AddDynamic(this, &ThisClass::RemoveItem);
+		}
 	}
 }
 
@@ -50,9 +54,8 @@ void UInv_EquippedGridSlot::AddItem(UInv_InventoryItem* Item)
 
 void UInv_EquippedGridSlot::RemoveItem(UInv_InventoryItem* Item)
 {
-	if (Item->IsEquippable() && Item->GetOwningGridEntityTag() == OwningEntityGridTag)
+	if (IsValid(EquippedSlottedItemInstance) && Item->IsEquippable() && Item == EquippedSlottedItemInstance->GetInventoryItem())
 	{
-		if (!IsValid(EquippedSlottedItemInstance)) return;
 		RemoveEquippedSlottedItem();
 	}
 }

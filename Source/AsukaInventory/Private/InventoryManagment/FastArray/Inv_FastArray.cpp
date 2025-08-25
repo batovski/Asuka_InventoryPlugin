@@ -169,11 +169,21 @@ void FInv_InventoryFastArray::RemoveEntry(UInv_InventoryItem* Item)
 	{
 		if (EntryIt->Item == Item)
 		{
+			OnItemRemoved.Broadcast(EntryIt->Item);
 			EntryIt.RemoveCurrent();
 			MarkArrayDirty();
 			return;
 		}
 	}
+}
+
+void FInv_InventoryFastArray::ClearArray()
+{
+	check(OwnerComponent);
+	AActor* OwnerActor = OwnerComponent->GetOwner();
+	check(OwnerActor->HasAuthority());
+	Entries.Empty();
+	MarkArrayDirty();
 }
 
 UInv_InventoryItem* FInv_InventoryFastArray::FindFirstItemByType(const FGameplayTag& ItemType) const

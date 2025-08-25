@@ -54,8 +54,12 @@ void UInv_EquipmentComponent::OnPossessedPawnChanged(APawn* OldPawn, APawn* NewP
 void UInv_EquipmentComponent::InitInventoryComponent()
 {
 	InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(OwningPlayerController.Get());
-	if (!InventoryComponent.IsValid()) return;;
+	if (!InventoryComponent.IsValid()) return;
 
+	if(!InventoryComponent->GetInventoryListMutable().OnItemRemoved.IsAlreadyBound(this, &ThisClass::OnItemRemoved))
+	{
+		InventoryComponent->GetInventoryListMutable().OnItemRemoved.AddDynamic(this, &ThisClass::OnItemRemoved);
+	}
 	if(!InventoryComponent->OnItemEquipped.IsAlreadyBound(this,&ThisClass::OnItemEquipped))
 	{
 		InventoryComponent->OnItemEquipped.AddDynamic(this, &ThisClass::OnItemEquipped);
@@ -128,11 +132,22 @@ void UInv_EquipmentComponent::OnItemUnEquipped(UInv_InventoryItem* UnEquippedIte
 	if (!IsValid(UnEquippedItem)) return;
 	if (!OwningPlayerController->HasAuthority()) return;
 
-	FInv_ItemManifest& ItemManifest = UnEquippedItem->GetItemManifestMutable();
 	FInv_EquipmentFragment* EquipmentFragment = UnEquippedItem->GetFragmentOfTypeMutable<FInv_EquipmentFragment>();
 	if (!EquipmentFragment) return;
 
 	EquipmentFragment->OnUnEquip(OwningPlayerController.Get());
 
 	RemoveEquippedActor(EquipmentFragment->GetEquipmentType());
+}
+
+void UInv_EquipmentComponent::OnItemRemoved(UInv_InventoryItem* UnEquippedItem)
+{
+	auto ActorToUnequip = EquippedActors.FindByPredicate([UnEquippedItem](const AInv_EquipActor* Actor)
+	{
+			return Actor->GetOwningItem() == UnEquippedItem;
+	});
+	if(ActorToUnequip)
+	{
+		OnItemUnEquipped(UnEquippedItem);
+	}
 }

@@ -66,6 +66,7 @@ public:
 	bool MarkEntryDirty(UInv_InventoryItem* Item);
 
 	void RemoveEntry(UInv_InventoryItem* Item);
+	void ClearArray();
 	UInv_InventoryItem* FindFirstItemByType(const FGameplayTag& ItemType) const;
 
 	FInventoryFastArrayItemChange OnItemAdded;

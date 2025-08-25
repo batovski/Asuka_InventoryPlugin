@@ -31,7 +31,8 @@ public class AsukaInventory : ModuleRules
 				"StructUtils",
 				"EnhancedInput",
 				"GameplayTags",
-				"GameplayAbilities"
+				"GameplayAbilities",
+				"MetasoundEngine"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

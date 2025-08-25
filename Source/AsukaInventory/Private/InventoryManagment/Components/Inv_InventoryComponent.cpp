@@ -55,36 +55,6 @@ void UInv_InventoryComponent::TryAddItemByComponent(UInv_ItemComponent* ItemComp
 	}
 }
 
-void UInv_InventoryComponent::TryAddItemToInventory(TScriptInterface<IInv_ItemListInterface> SourceInventory, TScriptInterface <IInv_ItemListInterface> TargetInventory,
-	UInv_InventoryItem* Item, int32 StackCount,const int32 GridIndex, const EInv_ItemCategory GridCategory)
-{
-	FInv_SlotAvailabilityResult Result = InventoryMenu->HasRoomForItem(Item, StackCount, GridIndex, GridCategory);
-	UInv_InventoryItem* FoundItem = Execute_FindFirstItemByType(TargetInventory.GetObject(),Item->GetItemManifest().GetItemType());
-	Result.Item = FoundItem;
-
-	if (Result.TotalRoomToFill == 0)
-	{
-		NoRoomInInventory.Broadcast();
-		return;
-	}
-
-	if (Result.Item.IsValid() && Result.bStackable)
-	{
-		// OnStackChange.Broadcast(Result); TODO::Need to call this on target inventory
-		// Add stacks to an item that already exists in the inventory
-		Server_AddStacksToItem(SourceInventory, TargetInventory, Item, Result.TotalRoomToFill, Result.Remainder);
-	}
-	else if (Result.TotalRoomToFill > 0)
-	{
-		// This item is new, add it to the inventory
-		FInv_ItemAddingOptions NewItemAddingOptions;
-		NewItemAddingOptions.StackCount = Result.bStackable ? Result.TotalRoomToFill : 0;
-		NewItemAddingOptions.GridIndex = Result.SlotsAvailabilities[0].Index;
-		NewItemAddingOptions.GridEntityTag = {};
-		Server_AddNewItem(SourceInventory, TargetInventory, Item, NewItemAddingOptions);
-	}
-}
-
 void UInv_InventoryComponent::Server_AddNewItemByItem_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item,
 	const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
@@ -213,8 +183,8 @@ void UInv_InventoryComponent::Server_DropItem_Implementation(UInv_InventoryItem*
 		// Remove the item from the inventory
 		InventoryList.RemoveEntry(Item);
 	}
-	if (Item->IsEquippable())
-		Multicast_EquipSlotClicked(nullptr, Item);
+	/*if (Item->IsEquippable())
+		Multicast_EquipSlotClicked(nullptr, Item);*/
 	SpawnDroppedItem(Item, StackCount);
 }
 

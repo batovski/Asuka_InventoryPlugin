@@ -87,8 +87,6 @@ void UInv_ExternalInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//Items are not replicated for some reason:
-
 	for(auto ItemAssetsIDs : InitialItemsIDs)
 	{
 		Server_AddNewItem(ItemAssetsIDs);

@@ -81,7 +81,7 @@ void UInv_EquippedGridSlot::SetSpatialInventory(UInv_SpatialInventory* NewSpatia
 UInv_EquippedSlottedItem* UInv_EquippedGridSlot::CreateEquippedSlottedItem(UInv_InventoryItem* Item)
 {
 	//if (!EquipmentTag.MatchesTagExact(EquipmentTypeTag)) return nullptr;
-	const FInv_GridFragment* GridFragment = GetFragment<FInv_GridFragment>(Item, FragmentTags::GridFragment);
+	const FInv_GridFragment* GridFragment = Item->GetFragmentStructByTag<FInv_GridFragment>(FragmentTags::GridFragment);
 	if (!GridFragment) return nullptr;
 
 	const FIntPoint Dimensions = GridFragment->GetGridSize();
@@ -96,7 +96,7 @@ UInv_EquippedSlottedItem* UInv_EquippedGridSlot::CreateEquippedSlottedItem(UInv_
 
 	SetInventoryItem(Item);
 
-	const FInv_ImageFragment* ImageFragment = GetFragment<FInv_ImageFragment>(Item, FragmentTags::IconFragment);
+	const FInv_ImageFragment* ImageFragment = Item->GetFragmentStructByTag<FInv_ImageFragment>(FragmentTags::IconFragment);
 	if (!ImageFragment) return nullptr;
 
 	FSlateBrush Brush;

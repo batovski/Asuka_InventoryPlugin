@@ -26,6 +26,7 @@ class UInv_ItemDataAsset;
  * 
  */
 
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FItemFragmentModified, FGameplayTag, ModifiedFragment);
 
 UCLASS()
@@ -35,7 +36,7 @@ class ASUKAINVENTORY_API UInv_InventoryItem : public UObject
 public:
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	void SetDynamicItemFragments(const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments);
+	void SetDynamicItemFragments(const TArray<FInstancedStruct>& Fragments);
 	void SetStaticItemManifestAssetId(const FPrimaryAssetId& NewAssetId);
 	const FPrimaryAssetId& GetStaticItemManifestAssetId() const { return StaticItemManifestAssetId; }
 	void LoadStaticItemManifest();
@@ -48,32 +49,32 @@ public:
 	void SetItemIndex(const int32 Index) { ItemIndex = Index; }
 	int32 GetItemIndex() const { return ItemIndex; }
 
-	const TArray<TInstancedStruct<FInv_ItemFragment>>& GetDynamicItemFragments() const { return DynamicItemFragments; }
+	const TArray<FInstancedStruct>& GetDynamicItemFragments() const { return DynamicItemFragments; }
 
 	bool IsStackable() const;
 	bool IsConsumable() const;
 	bool IsEquippable() const;
-	static void UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments, TArray <TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const UInv_InventoryItem* Item = nullptr);
+	void UpdateManifestData(TArray<FInstancedStruct>& StaticFragments, TArray <FInstancedStruct>& DynamicFragments, const UInv_InventoryItem* Item = nullptr);
 
 	UFUNCTION()
 	void OnRep_DynamicItemFragments();
 
-
-	const TInstancedStruct<FInv_ItemFragment>* GetFragmentStructByTag(const FGameplayTag& FragmentType) const;
-	TInstancedStruct<FInv_ItemFragment>* GetFragmentStructByTagMutable(const FGameplayTag& FragmentType);
-
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
-	T* GetFragmentOfTypeMutable();
+	const T* GetFragmentStructByTag(const FGameplayTag& FragmentType) const;
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
-	T* GetFragmentOfTypeWithTag(const FGameplayTag& FragmentType);
+	T* GetFragmentStructByTagMutable(const FGameplayTag& FragmentType);
+
+	FInstancedStruct* GetFragmentStructByTagMutable(const FGameplayTag& FragmentType);
 
 	UPROPERTY(VisibleAnywhere, BlueprintAssignable, Category = "Inventory")
 	FItemFragmentModified OnItemFragmentModified;
 
 private:
 
-	UPROPERTY(meta = (BaseStuct = "/Script/AsukaInventory.FInv_DynamicItemFragment"), ReplicatedUsing = OnRep_DynamicItemFragments)
-	TArray<TInstancedStruct<FInv_ItemFragment>> DynamicItemFragments {};
+	UPROPERTY(meta = (BaseStuct = "/Script/AsukaInventory.FInv_ItemFragment"), ReplicatedUsing = OnRep_DynamicItemFragments)
+	TArray<FInstancedStruct> DynamicItemFragments {};
+
+	TMap<FGameplayTag, FInstancedStruct*> FragmentsMap;
 
 	UPROPERTY(VisibleAnywhere, Replicated, Category = "Inventory")
 	FPrimaryAssetId StaticItemManifestAssetId;
@@ -86,77 +87,19 @@ private:
 	FGameplayTag OwningGridEntityTag{};
 };
 
-
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>
-T* UInv_InventoryItem::GetFragmentOfTypeMutable()
+const T* UInv_InventoryItem::GetFragmentStructByTag(const FGameplayTag& FragmentType) const
 {
-	for (TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
+	if ( FInstancedStruct* const* Fragment = FragmentsMap.Find(FragmentType))
 	{
-		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
-		{
-			return FragmentPtr;
-		}
-	}
-
-	auto& StaticFragments = GetItemManifestMutable().GetFragmentsMutable();
-	for (TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
-	{
-		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
-		{
-			if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>(); FragmentBasePtr->IsDynamicFragment())
-			{
-				TInstancedStruct<T> BaseStruct = TInstancedStruct<T>::Make(*FragmentPtr);
-;				TInstancedStruct<FInv_ItemFragment>& NewDynamicFragment = DynamicItemFragments.Add_GetRef(BaseStruct);
-				return NewDynamicFragment.GetMutablePtr<T>();
-			}
-			return FragmentPtr;
-		}
+		return	(*Fragment)->GetPtr<T>();
 	}
 	return nullptr;
 }
 
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>
-T* UInv_InventoryItem::GetFragmentOfTypeWithTag(const FGameplayTag& FragmentType)
+T* UInv_InventoryItem::GetFragmentStructByTagMutable(const FGameplayTag& FragmentType)
 {
-	for (TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
-	{
-		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
-		{
-			if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>())
-			{
-				if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
-				{
-					return FragmentPtr;
-				}
-			}
-		}
-	}
-
-	auto& StaticFragments = GetItemManifestMutable().GetFragmentsMutable();
-	for (TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
-	{
-		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
-		{
-			if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>(); FragmentBasePtr->IsDynamicFragment())
-			{
-				if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
-				{
-					TInstancedStruct<T> BaseStruct = TInstancedStruct<T>::Make(*FragmentPtr);
-					TInstancedStruct<FInv_ItemFragment>& NewDynamicFragment = DynamicItemFragments.Add_GetRef(BaseStruct);
-					return NewDynamicFragment.GetMutablePtr<T>();
-				}
-			}
-		}
-	}
-	return nullptr;
+	FInstancedStruct* FoundFragment = GetFragmentStructByTagMutable(FragmentType);
+	return FoundFragment ? FoundFragment->GetMutablePtr<T>() : nullptr;
 }
-
-template<typename FragmentType>
-const FragmentType* GetFragment(const UInv_InventoryItem* Item, const FGameplayTag& Tag)
-{
-	if (!IsValid(Item)) return nullptr;
-
-	const FInv_ItemManifest& Manifest = Item->GetItemManifest();
-	return Item->GetItemManifest().GetFragmentOfTypeWithTag<FragmentType>(Tag);
-}
-

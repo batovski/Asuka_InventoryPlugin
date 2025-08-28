@@ -65,7 +65,7 @@ void UInv_ExternalInventoryComponent::RemoveItemFromList_Implementation(UInv_Inv
 
 UInv_InventoryItem* UInv_ExternalInventoryComponent::AddItemToList_Implementation(
 	const FPrimaryAssetId& StaticItemManifestID,
-	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments,
+	const TArray<FInstancedStruct>& DynamicFragments,
 	const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
 	return InventoryList.AddEntry(this, StaticItemManifestID, NewItemAddingOptions, DynamicFragments);

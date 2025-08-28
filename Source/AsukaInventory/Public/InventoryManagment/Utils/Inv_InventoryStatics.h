@@ -43,16 +43,24 @@ public:
 	static UInv_HoverItem* GetHoverItem(const APlayerController* PlayerController);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	static const FInstancedStruct& GetFragmentFromItem(UInv_InventoryItem* Item,
+	static FInstancedStruct& GetFragmentFromItem(UInv_InventoryItem* Item,
 		UPARAM(meta = (Categories = "FragmentTags"))
 		FGameplayTag FragmentType,
 		 bool& IsFound);
+
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	static void SetFragmentValuesByTag(UInv_InventoryItem* Item,
-		UPARAM(Ref)
-		const FInstancedStruct& Fragment,
+	static void SetFragmentFloatProperty(UInv_InventoryItem* Item,
 		UPARAM(meta = (Categories = "FragmentTags"))
-		FGameplayTag ItemType,
+		FGameplayTag FragmentType,
+		const FString& PropertyName,
+		float Value,
+		bool& IsSucceeded);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	static float GetFragmentFloatProperty(UInv_InventoryItem* Item,
+		UPARAM(meta = (Categories = "FragmentTags"))
+		FGameplayTag FragmentType,
+		const FString& PropertyName,
 		bool& IsSucceeded);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -69,9 +77,9 @@ public:
 
 	static FInv_ItemManifest GetItemManifestFromID(const FPrimaryAssetId& ItemId);
 
-	static UInv_InventoryItem* CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
+	static UInv_InventoryItem* CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject, const TArray<FInstancedStruct>& DynamicFragments = {});
 
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	static AActor* CreateExternalInventoryActor(UObject* WorldContextObject, 
 	UInv_InventoryComponent* InventoryComponent, 
     const FString& PickupMessage,

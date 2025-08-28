@@ -45,7 +45,7 @@ void UInv_ItemComponent::InitItemManifest(const FPrimaryAssetId& NewItemManifest
 	StaticItemManifestID = NewItemManifestID;
 }
 
-void UInv_ItemComponent::InitDynamicData(const TArray<TInstancedStruct<FInv_ItemFragment>>& NewDynamicFragments)
+void UInv_ItemComponent::InitDynamicData(const TArray<FInstancedStruct>& NewDynamicFragments)
 {
 	DynamicFragments = NewDynamicFragments;
 }
@@ -79,13 +79,40 @@ void UInv_ItemComponent::OnRep_DynamicFragments()
 	ApplyDynamicFragmentsToManifest();
 }
 
+void UInv_ItemComponent::UpdateManifestData(TArray<FInstancedStruct>& StaticFragments, TArray<FInstancedStruct>& NewDynamicFragments)
+{
+	// Process static fragments first
+	for (FInstancedStruct& StaticItemFragment : StaticFragments)
+	{
+		if (const FInv_ItemFragment* FragmentBase = StaticItemFragment.GetPtr<FInv_ItemFragment>())
+		{
+			const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+			if (!FragmentsMap.Contains(FragmentTag))
+			{
+				FragmentsMap.Add(FragmentTag, &StaticItemFragment);
+			}
+		}
+	}
+
+	// Process dynamic fragments - they override static fragments
+	for (FInstancedStruct& DynamicFragment : NewDynamicFragments)
+	{
+		if (const FInv_ItemFragment* FragmentBase = DynamicFragment.GetPtr<FInv_ItemFragment>())
+		{
+			const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+			// Dynamic fragments always override static ones
+			FragmentsMap.FindOrAdd(FragmentTag) = &DynamicFragment;
+		}
+	}
+}
+
 void UInv_ItemComponent::ApplyDynamicFragmentsToManifest()
 {
 	if (StaticItemManifest.GetItemCategory() == EInv_ItemCategory::None)
 	{
 		StaticItemManifest = UInv_InventoryStatics::GetItemManifestFromID(StaticItemManifestID);
 	}
-	UInv_InventoryItem::UpdateManifestData(StaticItemManifest.GetFragmentsMutable(), DynamicFragments);
+	UpdateManifestData(StaticItemManifest.GetFragmentsMutable(), DynamicFragments);
 }
 
 void UInv_ItemComponent::SetSkeletalMeshAsset_Implementation(USkeletalMesh* MeshAsset)

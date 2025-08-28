@@ -9,6 +9,7 @@
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "Items/Inv_InventoryItem.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
+#include "Items/Fragments/Inv_WeaponFragments.h"
 #include "Widgets/Inventory/Base/Inv_InventoryBase.h"
 #include "Widgets/Inventory/Spatial/Inv_GridsTags.h"
 
@@ -51,8 +52,7 @@ UInv_HoverItem* UInv_InventoryStatics::GetHoverItem(const APlayerController* Pla
 
 	return InventoryBase->GetHoverItem();
 }
-
-const FInstancedStruct& UInv_InventoryStatics::GetFragmentFromItem(UInv_InventoryItem* Item, FGameplayTag FragmentType,
+FInstancedStruct& UInv_InventoryStatics::GetFragmentFromItem(UInv_InventoryItem* Item, FGameplayTag FragmentType,
 	bool& IsFound)
 {
 	static FInstancedStruct FoundFragment;
@@ -61,28 +61,229 @@ const FInstancedStruct& UInv_InventoryStatics::GetFragmentFromItem(UInv_Inventor
 		IsFound = false;
 		return FoundFragment;
 	}
-	if(const TInstancedStruct<FInv_ItemFragment>* Fragment = Item->GetFragmentStructByTag(FragmentType))
+	if(FInstancedStruct* Fragment = Item->GetFragmentStructByTagMutable(FragmentType))
 	{
-		FoundFragment.InitializeAs(Fragment->GetScriptStruct(), Fragment->GetMemory());
 		IsFound = true;
-		return FoundFragment;
+		return *Fragment;
 	}
 	IsFound = false;
 	return FoundFragment;
 }
-
-void UInv_InventoryStatics::SetFragmentValuesByTag(UInv_InventoryItem* Item, const FInstancedStruct& Fragment,
-	FGameplayTag ItemType, bool& IsSucceeded)
+void UInv_InventoryStatics::SetFragmentFloatProperty(UInv_InventoryItem* Item, FGameplayTag FragmentType,
+	const FString& PropertyName, float Value, bool& IsSucceeded)
 {
-	if(!IsValid(Item))
+	IsSucceeded = false;
+	
+	if (!IsValid(Item))
 	{
-		IsSucceeded = false;
+		UE_LOG(LogTemp, Warning, TEXT("SetFragmentFloatProperty: Invalid Item"));
 		return;
 	}
-	if (TInstancedStruct<FInv_ItemFragment>* DesiredFragment = Item->GetFragmentStructByTagMutable(ItemType))
+
+	if (PropertyName.IsEmpty())
 	{
-		DesiredFragment->InitializeAsScriptStruct(Fragment.GetScriptStruct(),Fragment.GetMemory());
+		UE_LOG(LogTemp, Warning, TEXT("SetFragmentFloatProperty: PropertyName is empty"));
+		return;
+	}
+
+	// Get the fragment
+	FInstancedStruct* Fragment = Item->GetFragmentStructByTagMutable(FragmentType);
+	if (!Fragment)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SetFragmentFloatProperty: Fragment not found for tag %s"), *FragmentType.ToString());
+		return;
+	}
+
+	const UScriptStruct* ScriptStruct = Fragment->GetScriptStruct();
+	void* FragmentMemory = Fragment->GetMutableMemory();
+
+	if (!ScriptStruct || !FragmentMemory)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SetFragmentFloatProperty: Invalid script struct or memory"));
+		return;
+	}
+
+	// Check if this is a nested property (contains '.')
+	if (PropertyName.Contains(TEXT(".")))
+	{
+		// Handle nested properties like "Damage.Value"
+		TArray<FString> PropertyPath;
+		PropertyName.ParseIntoArray(PropertyPath, TEXT("."), true);
+		
+		void* CurrentMemory = FragmentMemory;
+		const UScriptStruct* CurrentStruct = ScriptStruct;
+		
+		// Navigate through nested properties
+		for (int32 i = 0; i < PropertyPath.Num() - 1; ++i)
+		{
+			const FProperty* Property = CurrentStruct->FindPropertyByName(*PropertyPath[i]);
+			if (!Property)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("SetFragmentFloatProperty: Property '%s' not found in struct '%s'"), 
+					*PropertyPath[i], *CurrentStruct->GetName());
+				return;
+			}
+
+			// Check if this is a struct property
+			if (const FStructProperty* StructProperty = CastField<FStructProperty>(Property))
+			{
+				CurrentMemory = StructProperty->ContainerPtrToValuePtr<void>(CurrentMemory);
+				CurrentStruct = StructProperty->Struct;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("SetFragmentFloatProperty: Property '%s' is not a struct, cannot navigate further"), 
+					*PropertyPath[i]);
+				return;
+			}
+		}
+		
+		// Now set the final property
+		const FString& FinalPropertyName = PropertyPath.Last();
+		const FFloatProperty* FloatProperty = CastField<FFloatProperty>(CurrentStruct->FindPropertyByName(*FinalPropertyName));
+		
+		if (!FloatProperty)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("SetFragmentFloatProperty: Final property '%s' is not a float property"), *FinalPropertyName);
+			return;
+		}
+		FloatProperty->SetPropertyValue_InContainer(CurrentMemory, Value);
 		IsSucceeded = true;
+	}
+	else
+	{
+		// Handle direct properties
+		const FFloatProperty* FloatProperty = CastField<FFloatProperty>(ScriptStruct->FindPropertyByName(*PropertyName));
+		
+		if (!FloatProperty)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("SetFragmentFloatProperty: Property '%s' not found or is not a float property"), *PropertyName);
+			return;
+		}
+		
+		FloatProperty->SetPropertyValue_InContainer(FragmentMemory, Value);
+		IsSucceeded = true;
+	}
+
+	// Force replication: We need to touch the DynamicItemFragments array to trigger replication
+	if (IsSucceeded)
+	{
+		FInstancedStruct CopyFragment = *Fragment;
+		Fragment = &CopyFragment;
+	}
+}
+
+float UInv_InventoryStatics::GetFragmentFloatProperty(UInv_InventoryItem* Item, FGameplayTag FragmentType,
+	const FString& PropertyName, bool& IsSucceeded)
+{
+	IsSucceeded = false;
+	float DefaultValue = 0.0f;
+	
+	if (!IsValid(Item))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetFragmentFloatProperty: Invalid Item"));
+		return DefaultValue;
+	}
+
+	if (PropertyName.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetFragmentFloatProperty: PropertyName is empty"));
+		return DefaultValue;
+	}
+
+	// Get the fragment (const version since we're only reading)
+	const FInstancedStruct* Fragment = nullptr;
+	if (FInstancedStruct* MutableFragment = Item->GetFragmentStructByTagMutable(FragmentType))
+	{
+		Fragment = MutableFragment;
+	}
+	
+	if (!Fragment)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetFragmentFloatProperty: Fragment not found for tag %s"), *FragmentType.ToString());
+		return DefaultValue;
+	}
+
+	const UScriptStruct* ScriptStruct = Fragment->GetScriptStruct();
+	const void* FragmentMemory = Fragment->GetMemory();
+
+	if (!ScriptStruct || !FragmentMemory)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetFragmentFloatProperty: Invalid script struct or memory"));
+		return DefaultValue;
+	}
+
+	// Check if this is a nested property (contains '.')
+	if (PropertyName.Contains(TEXT(".")))
+	{
+		// Handle nested properties like "Damage.Value"
+		TArray<FString> PropertyPath;
+		PropertyName.ParseIntoArray(PropertyPath, TEXT("."), true);
+		
+		const void* CurrentMemory = FragmentMemory;
+		const UScriptStruct* CurrentStruct = ScriptStruct;
+		
+		// Navigate through nested properties
+		for (int32 i = 0; i < PropertyPath.Num() - 1; ++i)
+		{
+			const FProperty* Property = CurrentStruct->FindPropertyByName(*PropertyPath[i]);
+			if (!Property)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("GetFragmentFloatProperty: Property '%s' not found in struct '%s'"), 
+					*PropertyPath[i], *CurrentStruct->GetName());
+				return DefaultValue;
+			}
+
+			// Check if this is a struct property
+			if (const FStructProperty* StructProperty = CastField<FStructProperty>(Property))
+			{
+				CurrentMemory = StructProperty->ContainerPtrToValuePtr<const void>(CurrentMemory);
+				CurrentStruct = StructProperty->Struct;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("GetFragmentFloatProperty: Property '%s' is not a struct, cannot navigate further"), 
+					*PropertyPath[i]);
+				return DefaultValue;
+			}
+		}
+		
+		// Now get the final property value
+		const FString& FinalPropertyName = PropertyPath.Last();
+		const FFloatProperty* FloatProperty = CastField<FFloatProperty>(CurrentStruct->FindPropertyByName(*FinalPropertyName));
+		
+		if (!FloatProperty)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GetFragmentFloatProperty: Final property '%s' is not a float property"), *FinalPropertyName);
+			return DefaultValue;
+		}
+		
+		float Value = FloatProperty->GetPropertyValue_InContainer(CurrentMemory);
+		IsSucceeded = true;
+		
+		UE_LOG(LogTemp, VeryVerbose, TEXT("GetFragmentFloatProperty: Successfully read property '%s' = %f from fragment '%s'"), 
+			*PropertyName, Value, *FragmentType.ToString());
+			
+		return Value;
+	}
+	else
+	{
+		// Handle direct properties
+		const FFloatProperty* FloatProperty = CastField<FFloatProperty>(ScriptStruct->FindPropertyByName(*PropertyName));
+		
+		if (!FloatProperty)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GetFragmentFloatProperty: Property '%s' not found or is not a float property"), *PropertyName);
+			return DefaultValue;
+		}
+		
+		float Value = FloatProperty->GetPropertyValue_InContainer(FragmentMemory);
+		IsSucceeded = true;
+		
+		UE_LOG(LogTemp, VeryVerbose, TEXT("GetFragmentFloatProperty: Successfully read property '%s' = %f from fragment '%s'"), 
+			*PropertyName, Value, *FragmentType.ToString());
+			
+		return Value;
 	}
 }
 
@@ -142,7 +343,7 @@ FInv_ItemManifest UInv_InventoryStatics::GetItemManifestFromID(const FPrimaryAss
 	return Asset ? Cast<UInv_ItemDataAsset>(Asset)->ItemManifest : FInv_ItemManifest();
 }
 
-UInv_InventoryItem* UInv_InventoryStatics::CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
+UInv_InventoryItem* UInv_InventoryStatics::CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject, const TArray<FInstancedStruct>& DynamicFragments)
 {
 	UInv_InventoryItem* NewItem = NewObject<UInv_InventoryItem>(WorldContextObject, UInv_InventoryItem::StaticClass());;
 	NewItem->SetStaticItemManifestAssetId(ItemId);

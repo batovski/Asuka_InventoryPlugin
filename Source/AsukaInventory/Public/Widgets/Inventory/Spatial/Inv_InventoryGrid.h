@@ -9,6 +9,7 @@
 #include "Inv_InventoryGrid.generated.h"
 
 
+struct FInv_StackableFragment;
 class IInv_ItemListInterface;
 enum class EInv_GridSlotState : uint8;
 struct FGameplayTag;
@@ -45,7 +46,7 @@ public:
 	virtual void NativeOnInitialized() override;
 	EInv_ItemCategory GetItemCategory() const { return ItemCategory; }
 	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_ItemComponent* ItemComponent);
-	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_InventoryItem* Item, const int32 StackAmountOverride = -1, const int32 GridIndex = -1);
+	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest, const FInv_StackableFragment* StackableFragments = nullptr, const int32 GridIndex = -1);
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	void SetOwningCanvasPanel(UCanvasPanel* OwningPanel);
@@ -72,8 +73,6 @@ public:
 
 protected:
 	void DropHoverItemInGrid(UInv_InventoryGrid* InventoryGrid, const int32 GridIndex) const;
-
-	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest, const int32 StackAmountOverride = -1, const int32 GridIndex = -1);
 	void AddItemToIndices(const FInv_SlotAvailabilityResult& Result, UInv_InventoryItem* NewItem);
 
 	void RemoveItemFromGrid(const UInv_InventoryItem* Item, const int32 GridIndex);
@@ -118,7 +117,7 @@ private:
 	bool IsInGridBounds(const int32 StartIndex, const FIntPoint& ItemDimensions) const;
 	void MoveHoverItemFromOneGridToAnother(const UInv_InventoryGrid* InventoryGrid, int32 GridIndex) const;
 
-	FIntPoint GetItemDimensions(const FInv_ItemManifest& Manifest) const;
+	FIntPoint GetItemDimensions(const FInv_ItemManifest& Item) const;
 	bool CheckSlotConstraints(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot,
 		const TSet<int32>& CheckedIndices, TSet<int32>& OUT OutMaybeClaimed,
 		const FGameplayTag& ItemType, const int32 MaxStackSize) const;

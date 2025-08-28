@@ -22,7 +22,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void PickedUp();
 	void InitItemManifest(const FPrimaryAssetId& NewItemManifestID);
-	void InitDynamicData(const TArray<TInstancedStruct<FInv_ItemFragment>>& NewDynamicFragments);
+	void InitDynamicData(const TArray<FInstancedStruct>& NewDynamicFragments);
 
 	static UInv_ItemComponent* SpawnPickUpActor(const TSubclassOf<AActor>& ActorToSpawn, const UObject* WorldContextObject, const FVector& SpawnLocation,
 		const FRotator& SpawnRotation);
@@ -30,13 +30,13 @@ public:
 	FInv_ItemManifest GetItemManifest() const { return StaticItemManifest; }
 	const FPrimaryAssetId& GetStaticItemManifestID() const;
 
-	TArray<TInstancedStruct<FInv_ItemFragment>>& GetDynamicFragmentsMutable() { return DynamicFragments; }
+	TArray<FInstancedStruct>& GetDynamicFragmentsMutable() { return DynamicFragments; }
 
 	UFUNCTION()
 	void OnRep_DynamicFragments();
 
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
-	T* GetFragmentOfTypeMutable();
+	T* GetFragmentOfTypeMutable(const FGameplayTag& FragmentType);
 
 	// Skeletal mesh replication
 	UFUNCTION(Server, Reliable)
@@ -51,12 +51,16 @@ protected:
 	void OnPickedUp();
 
 private:
+	void UpdateManifestData(TArray<FInstancedStruct>& StaticFragments, TArray<FInstancedStruct>& NewDynamicFragments);
 	void ApplyDynamicFragmentsToManifest();
 
 	UPROPERTY(Replicated, EditAnywhere, Category = "Inventory")
 	FPrimaryAssetId StaticItemManifestID;
 	UPROPERTY(Replicated, ReplicatedUsing= OnRep_DynamicFragments)
-	TArray<TInstancedStruct<FInv_ItemFragment>> DynamicFragments;
+	TArray<FInstancedStruct> DynamicFragments;
+
+	TMap<FGameplayTag, FInstancedStruct*> FragmentsMap;
+
 	UPROPERTY()
 	FInv_ItemManifest StaticItemManifest;
 
@@ -68,14 +72,11 @@ private:
 };
 
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>
-T* UInv_ItemComponent::GetFragmentOfTypeMutable()
+T* UInv_ItemComponent::GetFragmentOfTypeMutable(const FGameplayTag& FragmentType)
 {
-	for (TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicFragments)
+	if (FInstancedStruct** Fragment = FragmentsMap.Find(FragmentType))
 	{
-		if (T* FragmentPtr = Fragment.GetMutablePtr<T>())
-		{
-			return FragmentPtr;
-		}
+		return (*Fragment)->GetMutablePtr<T>();
 	}
 	return nullptr;
 }

@@ -86,7 +86,7 @@ public:
 	// IInv_ItemListInterface interface:
 	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override { return InventoryList.FindFirstItemByType(ItemType); }
 	virtual void RemoveItemFromList_Implementation(UInv_InventoryItem* Item) override;
-	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions) override;
+	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<FInstancedStruct>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions) override;
 	virtual UInv_InventoryItem* MoveItemToList_Implementation(UInv_InventoryItem* Item) override { return InventoryList.AddEntry(Item); }
 	virtual void ChangeItemGridIndex_Implementation(UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions) override;
 	virtual void MarkItemDirty_Implementation(UInv_InventoryItem* Item) override;

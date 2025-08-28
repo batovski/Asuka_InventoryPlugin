@@ -60,8 +60,8 @@ public:
 	UInv_InventoryItem* AddEntry(UInv_ItemComponent* ItemComponent);
 	UInv_InventoryItem* AddEntry(UInv_InventoryItem* Item);
 	UInv_InventoryItem* AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID,
-		const FInv_ItemAddingOptions& NewItemAddingOptions ,const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
-	UInv_InventoryItem* AddEntry(const FPrimaryAssetId& StaticItemManifestID, const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments = {});
+		const FInv_ItemAddingOptions& NewItemAddingOptions ,const TArray<FInstancedStruct>& DynamicFragments = {});
+	UInv_InventoryItem* AddEntry(const FPrimaryAssetId& StaticItemManifestID, const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<FInstancedStruct>& DynamicFragments = {});
 	bool ChangeEntryGridIndex(UInv_InventoryItem* Item, const int32 NewGridIndex, const FGameplayTag& NewGameplayTag = {});
 	bool MarkEntryDirty(UInv_InventoryItem* Item);
 
@@ -108,7 +108,7 @@ public:
 	void RemoveItemFromList(UInv_InventoryItem* Item);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, meta = (AutoCreateRefTerm = "DynamicFragments"), Category = "Interface")
 	UInv_InventoryItem* AddItemToList(const FPrimaryAssetId& StaticItemManifestID,
-		const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions);
+		const TArray<FInstancedStruct>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, meta = (AutoCreateRefTerm = "DynamicFragments"), Category = "Interface")
 	UInv_InventoryItem* MoveItemToList(UInv_InventoryItem* Item);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")

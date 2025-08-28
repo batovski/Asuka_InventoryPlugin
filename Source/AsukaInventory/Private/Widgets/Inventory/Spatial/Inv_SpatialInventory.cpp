@@ -38,16 +38,17 @@ FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_ItemCompo
 FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride, const int32 GridIndex,
 	const EInv_ItemCategory GridCategory) const
 {
+	FInv_StackableFragment* StackableFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment);
 	if (GridCategory == EInv_ItemCategory::None)
 	{
 		switch (Item->GetItemManifest().GetItemCategory())
 		{
 		case EInv_ItemCategory::Equippable:
-			return Grid_Equippables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
+			return Grid_Equippables->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
 		case EInv_ItemCategory::Consumable:
-			return Grid_Consumables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
+			return Grid_Consumables->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
 		case EInv_ItemCategory::Craftable:
-			return Grid_Craftables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
+			return Grid_Craftables->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
 		default:
 			return FInv_SlotAvailabilityResult();
 		}
@@ -57,13 +58,13 @@ FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_Inventory
 		switch (GridCategory)
 		{
 		case EInv_ItemCategory::Equippable:
-			return Grid_Equippables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
+			return Grid_Equippables->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
 		case EInv_ItemCategory::Consumable:
-			return Grid_Consumables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
+			return Grid_Consumables->HasRoomForItem(Item->GetItemManifest(), StackableFragment , GridIndex);
 		case EInv_ItemCategory::Craftable:
-			return Grid_Craftables->HasRoomForItem(Item, StackAmountOverride, GridIndex);
+			return Grid_Craftables->HasRoomForItem(Item->GetItemManifest(), StackableFragment , GridIndex);
 		case EInv_ItemCategory::External:
-			return Grid_Loot->HasRoomForItem(Item, StackAmountOverride, GridIndex);
+			return Grid_Loot->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
 		default:
 			return FInv_SlotAvailabilityResult();
 		}

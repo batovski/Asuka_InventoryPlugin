@@ -105,7 +105,7 @@ void UInv_EquipmentComponent::OnItemEquipped(UInv_InventoryItem* EquippedItem)
 	if (!OwningPlayerController->HasAuthority()) return;
 
 	FInv_ItemManifest& ItemManifest = EquippedItem->GetItemManifestMutable();
-	FInv_EquipmentFragment* EquipmentFragment = EquippedItem->GetFragmentOfTypeMutable<FInv_EquipmentFragment>();
+	FInv_EquipmentFragment* EquipmentFragment = EquippedItem->GetFragmentStructByTagMutable<FInv_EquipmentFragment>(FragmentTags::EquipmentFragment);
 	if (!EquipmentFragment) return;
 
 	if (!OwningSkeletalMesh.IsValid()) return;
@@ -116,7 +116,7 @@ void UInv_EquipmentComponent::OnItemEquipped(UInv_InventoryItem* EquippedItem)
 
 	EquippedActors.Add(NewEquippedActor);
 
-	FInv_SkeletalMeshFragment* SkeletalMeshFragment = EquippedItem->GetFragmentOfTypeMutable<FInv_SkeletalMeshFragment>();
+	const FInv_SkeletalMeshFragment* SkeletalMeshFragment = EquippedItem->GetFragmentStructByTag<FInv_SkeletalMeshFragment>(FragmentTags::SkeltalMeshFragment);
 	if (!SkeletalMeshFragment) return;
 
 	USkeletalMesh* MeshAsset = SkeletalMeshFragment->GetDesiredSkeletalMesh();
@@ -132,7 +132,7 @@ void UInv_EquipmentComponent::OnItemUnEquipped(UInv_InventoryItem* UnEquippedIte
 	if (!IsValid(UnEquippedItem)) return;
 	if (!OwningPlayerController->HasAuthority()) return;
 
-	FInv_EquipmentFragment* EquipmentFragment = UnEquippedItem->GetFragmentOfTypeMutable<FInv_EquipmentFragment>();
+	FInv_EquipmentFragment* EquipmentFragment = UnEquippedItem->GetFragmentStructByTagMutable<FInv_EquipmentFragment>(FragmentTags::EquipmentFragment);
 	if (!EquipmentFragment) return;
 
 	EquipmentFragment->OnUnEquip(OwningPlayerController.Get());
@@ -142,7 +142,7 @@ void UInv_EquipmentComponent::OnItemUnEquipped(UInv_InventoryItem* UnEquippedIte
 
 void UInv_EquipmentComponent::OnItemRemoved(UInv_InventoryItem* UnEquippedItem)
 {
-	auto ActorToUnequip = EquippedActors.FindByPredicate([UnEquippedItem](const AInv_EquipActor* Actor)
+	const auto ActorToUnequip = EquippedActors.FindByPredicate([UnEquippedItem](const AInv_EquipActor* Actor)
 	{
 			return Actor->GetOwningItem() == UnEquippedItem;
 	});

@@ -59,7 +59,7 @@ void UInv_InventoryComponent::Server_AddNewItemByItem_Implementation(const TScri
 	const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
 	UInv_InventoryItem* NewItem = Execute_AddItemToList(SourceInventory.GetObject(), Item->GetStaticItemManifestAssetId(), Item->GetDynamicItemFragments(), NewItemAddingOptions);
-	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(NewItemAddingOptions.StackCount);
 	}
@@ -76,7 +76,7 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(const TScrip
 	UInv_InventoryItem* FoundItem = Execute_FindFirstItemByType(TargetInventory.GetObject(), ItemType);
 	if (!FoundItem) return;
 
-	if (FInv_StackableFragment* StackFragment = FoundItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	if (FInv_StackableFragment* StackFragment = FoundItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(StackFragment->GetStackCount() + StackCount);
 	}
@@ -85,7 +85,7 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(const TScrip
 	{
 		Execute_RemoveItemFromList(SourceInventory.GetObject(), Item);
 	}
-	else if (FInv_StackableFragment* StackableFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	else if (FInv_StackableFragment* StackableFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		// If the item is stackable, we can update the stack count
 		StackableFragment->SetStackCount(Remainder);
@@ -99,7 +99,7 @@ void UInv_InventoryComponent::Server_AddStacksToItemByComponent_Implementation(U
 	UInv_InventoryItem* FoundItem = InventoryList.FindFirstItemByType(ItemType);
 	if (!FoundItem) return;
 
-	if(FInv_StackableFragment* StackFragment = FoundItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	if(FInv_StackableFragment* StackFragment = FoundItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(StackFragment->GetStackCount() + StackCount);
 	}
@@ -108,7 +108,7 @@ void UInv_InventoryComponent::Server_AddStacksToItemByComponent_Implementation(U
 	{
 		ItemComponent->PickedUp();
 	}
-	else if(FInv_StackableFragment* StackableFragment = ItemComponent->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	else if(FInv_StackableFragment* StackableFragment = ItemComponent->GetFragmentOfTypeMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		// If the item is stackable, we can update the stack count
 		StackableFragment->SetStackCount(Remainder);
@@ -118,7 +118,7 @@ void UInv_InventoryComponent::Server_AddStacksToItemByComponent_Implementation(U
 void UInv_InventoryComponent::Server_AddNewItemByComponent_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount)
 {
 	UInv_InventoryItem* NewItem = InventoryList.AddEntry(ItemComponent);
-	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(StackCount);
 	}
@@ -144,7 +144,7 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInte
 	{
 
 		UInv_InventoryItem* NewItem = Execute_AddItemToList(TargetInventory.GetObject(), Item->GetStaticItemManifestAssetId(), Item->GetDynamicItemFragments(), NewItemAddingOptions);
-		if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+		if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 		{
 			StackFragment->SetStackCount(NewItemAddingOptions.StackCount);
 		}
@@ -153,7 +153,7 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInte
 		{
 			GetInventoryListMutable().OnItemAdded.Broadcast(NewItem);
 		}
-		if (FInv_StackableFragment* OldItemStackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+		if (FInv_StackableFragment* OldItemStackFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 		{
 			if (OldItemStackFragment->GetStackCount() <= NewItemAddingOptions.StackCount)
 				Execute_RemoveItemFromList(SourceInventory.GetObject(), Item);
@@ -173,7 +173,7 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInte
 void UInv_InventoryComponent::Server_DropItem_Implementation(UInv_InventoryItem* Item, int32 StackCount)
 {
 	int32 NewStackCount = 0;
-	if (FInv_StackableFragment* StackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	if (FInv_StackableFragment* StackFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		NewStackCount = StackFragment->GetStackCount()- StackCount;
 		StackFragment->SetStackCount(NewStackCount);
@@ -198,7 +198,7 @@ void UInv_InventoryComponent::Server_DropItemFromExternalInventory_Implementatio
 	const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item, int32 StackCount)
 {
 	int32 NewStackCount = 0;
-	if (FInv_StackableFragment* StackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	if (FInv_StackableFragment* StackFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		NewStackCount = StackFragment->GetStackCount() - StackCount;
 		StackFragment->SetStackCount(NewStackCount);
@@ -222,17 +222,17 @@ void UInv_InventoryComponent::SpawnDroppedItem(UInv_InventoryItem* Item, int32 S
 	SpawnLocation.Z += RelativeSpawnElevation;
 	const FRotator SpawnRotation = FRotator::ZeroRotator;
 
-	FInv_PickUpFragment* PickUpFragment = Item->GetFragmentOfTypeMutable<FInv_PickUpFragment>();
+	FInv_PickUpFragment* PickUpFragment = Item->GetFragmentStructByTagMutable<FInv_PickUpFragment>(FragmentTags::DynamicFragmentTags::PickUpActorFragment);
 	if (!PickUpFragment) { return; }
 	UInv_ItemComponent* NewItemComponent = UInv_ItemComponent::SpawnPickUpActor(PickUpFragment->GetPickUpActorClass(),this, SpawnLocation, SpawnRotation);
 	if (!NewItemComponent) return;
 	NewItemComponent->InitItemManifest(Item->GetStaticItemManifestAssetId()); //TODO : REDUNDANT
 	NewItemComponent->InitDynamicData(Item->GetDynamicItemFragments());
-	if(FInv_StackableFragment* StackableFragment = NewItemComponent->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	if(FInv_StackableFragment* StackableFragment = NewItemComponent->GetFragmentOfTypeMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackableFragment->SetStackCount(StackCount);
 	}
-	FInv_SkeletalMeshFragment* SkeletalMeshFragment = Item->GetFragmentOfTypeMutable<FInv_SkeletalMeshFragment>();
+	FInv_SkeletalMeshFragment* SkeletalMeshFragment = Item->GetFragmentStructByTagMutable<FInv_SkeletalMeshFragment>(FragmentTags::SkeltalMeshFragment);
 	if (!SkeletalMeshFragment) return;
 	
 	// Use the replicated function to set the skeletal mesh asset
@@ -249,7 +249,7 @@ void UInv_InventoryComponent::RemoveItemFromList_Implementation(UInv_InventoryIt
 }
 
 UInv_InventoryItem* UInv_InventoryComponent::AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID,
-	const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions)
+	const TArray<FInstancedStruct>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
 	return InventoryList.AddEntry(StaticItemManifestID, NewItemAddingOptions, DynamicFragments);
 }
@@ -266,7 +266,7 @@ void UInv_InventoryComponent::MarkItemDirty_Implementation(UInv_InventoryItem* I
 
 void UInv_InventoryComponent::Server_ConsumeItem_Implementation(UInv_InventoryItem* Item)
 {
-	if (FInv_StackableFragment* StackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	if (FInv_StackableFragment* StackFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		const int32 NewStackCount = StackFragment->GetStackCount() - 1;
 		if (NewStackCount <= 0)
@@ -278,7 +278,7 @@ void UInv_InventoryComponent::Server_ConsumeItem_Implementation(UInv_InventoryIt
 			StackFragment->SetStackCount(NewStackCount);
 		}
 	}
-	if(FInv_ConsumableFragment* ConsumableFragment = Item->GetFragmentOfTypeMutable<FInv_ConsumableFragment>())
+	if(FInv_ConsumableFragment* ConsumableFragment = Item->GetFragmentStructByTagMutable<FInv_ConsumableFragment>(FragmentTags::ConsumableFragment))
 	{
 		ConsumableFragment->OnConsume(OwningController.Get());
 	}
@@ -324,7 +324,7 @@ void UInv_InventoryComponent::Server_MarkItemDirty_Implementation(
 void UInv_InventoryComponent::Server_UpdateItemStackCount_Implementation(UInv_InventoryItem* Item,
 	const int32 StackCount)
 {
-	if (FInv_StackableFragment* StackFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>())
+	if (FInv_StackableFragment* StackFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(StackCount);
 	}

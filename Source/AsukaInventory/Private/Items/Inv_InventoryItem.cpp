@@ -14,13 +14,9 @@ void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(ThisClass, StaticItemManifestAssetId);
 	DOREPLIFETIME(ThisClass, ItemIndex);
 	DOREPLIFETIME(ThisClass, OwningGridEntityTag);
-	//DOREPLIFETIME_CONDITION(ThisClass, DynamicItemFragments, COND_OwnerOnly);
-	//DOREPLIFETIME_CONDITION(ThisClass, StaticItemManifestAssetId, COND_OwnerOnly);
-	//DOREPLIFETIME_CONDITION(ThisClass, ItemIndex, COND_OwnerOnly);
-	//DOREPLIFETIME_CONDITION(ThisClass, OwningGridEntityTag, COND_OwnerOnly);
 }
 
-void UInv_InventoryItem::SetDynamicItemFragments(const TArray<TInstancedStruct<FInv_ItemFragment>>& Fragments)
+void UInv_InventoryItem::SetDynamicItemFragments(const TArray<FInstancedStruct>& Fragments)
 {
 	DynamicItemFragments = Fragments;
 }
@@ -51,7 +47,7 @@ void UInv_InventoryItem::SetOwningGridEntityTag(const FGameplayTag& NewTag)
 
 bool UInv_InventoryItem::IsStackable() const
 {
-	const FInv_StackableFragment* StackableFragment = GetItemManifest().GetFragmentOfType<FInv_StackableFragment>();
+	const FInv_StackableFragment* StackableFragment = GetFragmentStructByTag<FInv_StackableFragment>(FragmentTags::StackableFragment);
 	return StackableFragment != nullptr;
 }
 
@@ -62,26 +58,45 @@ bool UInv_InventoryItem::IsConsumable() const
 
 bool UInv_InventoryItem::IsEquippable() const
 {
-	const FInv_EquipmentFragment* EquipmentFragment = GetItemManifest().GetFragmentOfType<FInv_EquipmentFragment>();
+	const FInv_EquipmentFragment* EquipmentFragment = GetFragmentStructByTag<FInv_EquipmentFragment>(FragmentTags::EquipmentFragment);
 	return EquipmentFragment != nullptr;
 }
 
-void UInv_InventoryItem::UpdateManifestData(TArray<TInstancedStruct<FInv_ItemFragment>>& StaticFragments, TArray <TInstancedStruct<FInv_ItemFragment>>& DynamicFragments,
+void UInv_InventoryItem::UpdateManifestData(TArray<FInstancedStruct>& StaticFragments, TArray <FInstancedStruct>& DynamicFragments,
 	const UInv_InventoryItem* Item)
 {
-	//TODO:: OPTIMIZE THIS with hashmap if fragments are unique 
-	for (TInstancedStruct<FInv_ItemFragment>& DynamicFragment : DynamicFragments)
+	// Process static fragments first
+	for (FInstancedStruct& StaticItemFragment : StaticFragments)
 	{
-		for (TInstancedStruct<FInv_ItemFragment>& StaticItemFragment : StaticFragments)
+		if (const FInv_ItemFragment* FragmentBase = StaticItemFragment.GetPtr<FInv_ItemFragment>())
 		{
-			if (StaticItemFragment.Get().IsDynamicFragment() && StaticItemFragment.Get().GetFragmentTag().MatchesTagExact(DynamicFragment.Get().GetFragmentTag()))
+			const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+			if (!FragmentsMap.Contains(FragmentTag))
 			{
-				StaticItemFragment = DynamicFragment;
-				if(Item)
+				FragmentsMap.Add(FragmentTag, &StaticItemFragment);
+				
+				if (Item)
 				{
 					// Notify listeners about the modification
-					Item->OnItemFragmentModified.Broadcast(DynamicFragment.Get().GetFragmentTag());
+					Item->OnItemFragmentModified.Broadcast(FragmentTag);
 				}
+			}
+		}
+	}
+	
+	// Process dynamic fragments - they override static fragments
+	for (FInstancedStruct& DynamicFragment : DynamicFragments)
+	{
+		if (const FInv_ItemFragment* FragmentBase = DynamicFragment.GetPtr<FInv_ItemFragment>())
+		{
+			const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+			// Dynamic fragments always override static ones
+			FragmentsMap.FindOrAdd(FragmentTag) = &DynamicFragment;
+			
+			if (Item)
+			{
+				// Notify listeners about the modification
+				Item->OnItemFragmentModified.Broadcast(FragmentTag);
 			}
 		}
 	}
@@ -92,60 +107,27 @@ void UInv_InventoryItem::OnRep_DynamicItemFragments()
 	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(),DynamicItemFragments, this);
 }
 
-const TInstancedStruct<FInv_ItemFragment>* UInv_InventoryItem::GetFragmentStructByTag(const FGameplayTag& FragmentType) const
+FInstancedStruct* UInv_InventoryItem::GetFragmentStructByTagMutable(const FGameplayTag& FragmentType)
 {
-	for (const TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
+	if (FInstancedStruct** Fragment = FragmentsMap.Find(FragmentType))
 	{
-		if (const FInv_ItemFragment* FragmentBasePtr = Fragment.GetPtr<FInv_ItemFragment>())
-		{
-			if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
+		auto FoundFragment = (*Fragment)->GetPtr<FInv_ItemFragment>();
+		auto DynamicFragment = DynamicItemFragments.FindByPredicate([FoundFragment](const FInstancedStruct& Element)
 			{
-				return &Fragment;
-			}
-		}
-	}
+				if (const FInv_ItemFragment* ElementFragment = Element.GetPtr<FInv_ItemFragment>())
+				{
+					return ElementFragment->GetFragmentTag() == FoundFragment->GetFragmentTag();
+				}
+				return false;
+			});
 
-	auto& StaticFragments = GetItemManifest().GetFragments();
-	for (const TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
-	{
-		if (const FInv_ItemFragment* FragmentBasePtr = Fragment.GetPtr<FInv_ItemFragment>())
+		if (!DynamicFragment && FoundFragment->IsDynamicFragment())
 		{
-			if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
-			{
-				return &Fragment;
-			}
+			const int32 index = DynamicItemFragments.Add(*(*Fragment));
+			FragmentsMap.FindOrAdd(FragmentType) = &DynamicItemFragments[index];
+			Fragment = FragmentsMap.Find(FragmentType);
 		}
-	}
-	return nullptr;
-}
-
-TInstancedStruct<FInv_ItemFragment>* UInv_InventoryItem::GetFragmentStructByTagMutable(const FGameplayTag& FragmentType)
-{
-	for (TInstancedStruct<FInv_ItemFragment>& Fragment : DynamicItemFragments)
-	{
-		if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>())
-		{
-			if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
-			{
-				return &Fragment;
-			}
-		}
-	}
-
-	auto& StaticFragments = GetItemManifestMutable().GetFragmentsMutable();
-	for (TInstancedStruct<FInv_ItemFragment>& Fragment : StaticFragments)
-	{
-		if (FInv_ItemFragment* FragmentBasePtr = Fragment.GetMutablePtr<FInv_ItemFragment>(); FragmentBasePtr->IsDynamicFragment())
-		{
-			if (FragmentBasePtr->GetFragmentTag().MatchesTagExact(FragmentType))
-			{
-				// Create a copy preserving the actual derived type
-				TInstancedStruct<FInv_ItemFragment> BaseStruct;
-				BaseStruct.InitializeAsScriptStruct(Fragment.GetScriptStruct(), Fragment.GetMutableMemory());
-				TInstancedStruct<FInv_ItemFragment>& NewDynamicFragment = DynamicItemFragments.Add_GetRef(BaseStruct);
-				return &NewDynamicFragment;
-			}
-		}
+		return (*Fragment);
 	}
 	return nullptr;
 }

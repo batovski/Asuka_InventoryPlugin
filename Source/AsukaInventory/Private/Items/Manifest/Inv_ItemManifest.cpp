@@ -13,7 +13,7 @@ void FInv_ItemManifest::Manifest()
 {
 	for(auto& Fragment : GetFragmentsMutable())
 	{
-		Fragment.GetMutable().Manifest();
+		Fragment.GetMutable<FInv_ItemFragment>().Manifest();
 	}
 }
 

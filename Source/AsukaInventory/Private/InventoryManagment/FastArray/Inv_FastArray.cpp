@@ -87,7 +87,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_InventoryItem* Item)
 }
 
 UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComponent* ExternalComponent, const FPrimaryAssetId& StaticItemManifestID,
-                                                      const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
+                                                      const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<FInstancedStruct>& DynamicFragments)
 {
 	check(OwnerComponent)
 	AActor* OwnerActor = OwnerComponent->GetOwner();
@@ -102,7 +102,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComp
 	MarkItemDirty(NewEntry);
 	return NewEntry.Item;
 }
-UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID, const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<TInstancedStruct<FInv_ItemFragment>>& DynamicFragments)
+UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID, const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<FInstancedStruct>& DynamicFragments)
 {
 	check(OwnerComponent);
 	AActor* OwnerActor = OwnerComponent->GetOwner();

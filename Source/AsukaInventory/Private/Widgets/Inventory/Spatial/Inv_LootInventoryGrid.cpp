@@ -22,8 +22,8 @@ void UInv_LootInventoryGrid::NativeOnInitialized()
 
 void UInv_LootInventoryGrid::AddItem(UInv_InventoryItem* Item)
 {
-	FInv_StackableFragment* StackableFragment = Item->GetFragmentOfTypeMutable<FInv_StackableFragment>();
-	const FInv_SlotAvailabilityResult Result = HasRoomForItem(Item, StackableFragment ? StackableFragment->GetStackCount() : -1, Item->GetItemIndex());
+	FInv_StackableFragment* StackableFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment);
+	const FInv_SlotAvailabilityResult Result = HasRoomForItem(Item->GetItemManifest(), StackableFragment, Item->GetItemIndex());
 	AddItemToIndices(Result, Item);
 }
 

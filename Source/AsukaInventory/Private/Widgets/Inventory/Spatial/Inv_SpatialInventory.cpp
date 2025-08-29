@@ -140,18 +140,17 @@ void UInv_SpatialInventory::SetItemDescriptionSizeAndPosition(UInv_ItemDescripti
 
 void UInv_SpatialInventory::OnItemHovered(UInv_InventoryItem* Item)
 {
-	const auto& Manifest = Item->GetItemManifest();
 	UInv_ItemDescription* DescriptionWidget = GetItemDescription();
 	DescriptionWidget->SetVisibility(ESlateVisibility::Collapsed);
 
 	GetOwningPlayer()->GetWorldTimerManager().ClearTimer(ItemDescriptionTimer);
 
 	FTimerDelegate DescriptionTimerDelegate;
-	DescriptionTimerDelegate.BindLambda([this,&Manifest]()
+	DescriptionTimerDelegate.BindLambda([this,Item]()
 	{
 			GetItemDescription()->SetVisibility(ESlateVisibility::HitTestInvisible);
 			//Assimilate the item data into the description widget
-			Manifest.AssimilateInventoryFragments(GetItemDescription());
+			Item->AssimilateInventoryFragments(GetItemDescription());
 			
 	});
 	GetOwningPlayer()->GetWorldTimerManager().SetTimer(ItemDescriptionTimer, DescriptionTimerDelegate, DescriptionTimerDelay,false);

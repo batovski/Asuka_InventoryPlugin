@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Items/Inv_InventoryItem.h"
 #include "Items/Manifest/Inv_ItemManifest.h"
 #include "Inv_ItemComponent.generated.h"
 
@@ -74,9 +75,6 @@ private:
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>
 T* UInv_ItemComponent::GetFragmentOfTypeMutable(const FGameplayTag& FragmentType)
 {
-	if (FInstancedStruct** Fragment = FragmentsMap.Find(FragmentType))
-	{
-		return (*Fragment)->GetMutablePtr<T>();
-	}
-	return nullptr;
+	FInstancedStruct* FoundFragment = UInv_InventoryItem::GetFragmentStructByTagMutable(DynamicFragments, FragmentsMap, FragmentType);
+	return FoundFragment ? FoundFragment->GetMutablePtr<T>() : nullptr;
 }

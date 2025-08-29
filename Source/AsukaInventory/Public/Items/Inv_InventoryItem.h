@@ -51,6 +51,8 @@ public:
 
 	const TArray<FInstancedStruct>& GetDynamicItemFragments() const { return DynamicItemFragments; }
 
+	void AssimilateInventoryFragments(UInv_CompositeBase* Composite) const;
+
 	bool IsStackable() const;
 	bool IsConsumable() const;
 	bool IsEquippable() const;
@@ -63,8 +65,9 @@ public:
 	const T* GetFragmentStructByTag(const FGameplayTag& FragmentType) const;
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>
 	T* GetFragmentStructByTagMutable(const FGameplayTag& FragmentType);
-
 	FInstancedStruct* GetFragmentStructByTagMutable(const FGameplayTag& FragmentType);
+
+	static FInstancedStruct* GetFragmentStructByTagMutable(TArray<FInstancedStruct>& DynamicFragments, TMap<FGameplayTag, FInstancedStruct*>& FragmentsMap, const FGameplayTag& FragmentType);
 
 	UPROPERTY(VisibleAnywhere, BlueprintAssignable, Category = "Inventory")
 	FItemFragmentModified OnItemFragmentModified;
@@ -100,6 +103,6 @@ const T* UInv_InventoryItem::GetFragmentStructByTag(const FGameplayTag& Fragment
 template <typename T> requires std::derived_from<T, FInv_ItemFragment>
 T* UInv_InventoryItem::GetFragmentStructByTagMutable(const FGameplayTag& FragmentType)
 {
-	FInstancedStruct* FoundFragment = GetFragmentStructByTagMutable(FragmentType);
+	FInstancedStruct* FoundFragment = GetFragmentStructByTagMutable(DynamicItemFragments, FragmentsMap, FragmentType);
 	return FoundFragment ? FoundFragment->GetMutablePtr<T>() : nullptr;
 }

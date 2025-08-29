@@ -48,6 +48,7 @@ void UInv_ItemComponent::InitItemManifest(const FPrimaryAssetId& NewItemManifest
 void UInv_ItemComponent::InitDynamicData(const TArray<FInstancedStruct>& NewDynamicFragments)
 {
 	DynamicFragments = NewDynamicFragments;
+	ApplyDynamicFragmentsToManifest();
 }
 UInv_ItemComponent* UInv_ItemComponent::SpawnPickUpActor(const TSubclassOf<AActor>& ActorToSpawn, const UObject* WorldContextObject, const FVector& SpawnLocation,
 	const FRotator& SpawnRotation)

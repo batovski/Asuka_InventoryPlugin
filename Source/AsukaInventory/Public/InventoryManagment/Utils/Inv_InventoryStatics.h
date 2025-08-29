@@ -48,7 +48,7 @@ public:
 		FGameplayTag FragmentType,
 		 bool& IsFound);
 
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	static void SetFragmentFloatProperty(UInv_InventoryItem* Item,
 		UPARAM(meta = (Categories = "FragmentTags"))
 		FGameplayTag FragmentType,

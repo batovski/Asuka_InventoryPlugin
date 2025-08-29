@@ -30,8 +30,6 @@ struct ASUKAINVENTORY_API FInv_ItemManifest
 
 	const TArray<FInstancedStruct>& GetFragments() const { return StaticFragments; }
 
-	void AssimilateInventoryFragments(UInv_CompositeBase* Composite) const;
-
 	void AddStaticFragment(const FInstancedStruct& Fragment) { StaticFragments.Add(Fragment);}
 
 	template<typename T> requires std::derived_from<T, FInv_ItemFragment>

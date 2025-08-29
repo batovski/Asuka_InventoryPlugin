@@ -84,10 +84,12 @@ void AInv_PlayerControllerBase::PrimaryInteract()
 	{
 		InventoryComponent->TryAddItemByComponent(ItemComp);
 	}
+	if (!ThisActor.IsValid()) return;
 	UInv_ExternalInventoryComponent* ItemsContainer = ThisActor->FindComponentByClass<UInv_ExternalInventoryComponent>();
 	if(IsValid(ItemsContainer))
 	{
 		ItemsContainer->OpenItemsContainer(this);
+		ThisActor.Reset();
 	}
 }
 

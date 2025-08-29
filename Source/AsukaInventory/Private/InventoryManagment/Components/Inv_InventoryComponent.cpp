@@ -63,11 +63,6 @@ void UInv_InventoryComponent::Server_AddNewItemByItem_Implementation(const TScri
 	{
 		StackFragment->SetStackCount(NewItemAddingOptions.StackCount);
 	}
-
-	if (GetOwner()->GetNetMode() == NM_ListenServer || GetOwner()->GetNetMode() == NM_Standalone)
-	{
-		GetInventoryListMutable().OnItemAdded.Broadcast(NewItem);
-	}
 }
 
 void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount, int32 Remainder)
@@ -123,11 +118,6 @@ void UInv_InventoryComponent::Server_AddNewItemByComponent_Implementation(UInv_I
 		StackFragment->SetStackCount(StackCount);
 	}
 
-	if(GetOwner()->GetNetMode() == NM_ListenServer || GetOwner()->GetNetMode() == NM_Standalone)
-	{
-		GetInventoryListMutable().OnItemAdded.Broadcast(NewItem);
-	}
-
 	ItemComponent->PickedUp();
 }
 
@@ -149,10 +139,6 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInte
 			StackFragment->SetStackCount(NewItemAddingOptions.StackCount);
 		}
 
-		if (GetOwner()->GetNetMode() == NM_ListenServer || GetOwner()->GetNetMode() == NM_Standalone)
-		{
-			GetInventoryListMutable().OnItemAdded.Broadcast(NewItem);
-		}
 		if (FInv_StackableFragment* OldItemStackFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 		{
 			if (OldItemStackFragment->GetStackCount() <= NewItemAddingOptions.StackCount)
@@ -359,7 +345,6 @@ void UInv_InventoryComponent::ToggleInventoryMenu()
 	{
 		OpenInventoryMenu();
 	}
-	OnInventoryMenuToggled.Broadcast(bIsInventoryMenuOpen);
 }
 
 void UInv_InventoryComponent::AddRepSubObj(UObject* SubObj)
@@ -391,6 +376,7 @@ void UInv_InventoryComponent::OpenInventoryMenu()
 
 	if (!OwningController.IsValid()) return;
 	InventoryMenu->ShowInventoryCursor();
+	OnInventoryMenuToggled.Broadcast(bIsInventoryMenuOpen);
 }
 
 void UInv_InventoryComponent::CloseInventoryMenu()
@@ -401,6 +387,7 @@ void UInv_InventoryComponent::CloseInventoryMenu()
 
 	if (!OwningController.IsValid()) return;
 	InventoryMenu->HideInventoryCursor();
+	OnInventoryMenuToggled.Broadcast(bIsInventoryMenuOpen);
 }
 
 

@@ -8,8 +8,6 @@
 #include "InventoryManagment/Components/Inv_ExternalInventoryComponent.h"
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "Items/Inv_InventoryItem.h"
-#include "Items/Fragments/Inv_ItemFragment.h"
-#include "Items/Fragments/Inv_WeaponFragments.h"
 #include "Widgets/Inventory/Base/Inv_InventoryBase.h"
 #include "Widgets/Inventory/Spatial/Inv_GridsTags.h"
 

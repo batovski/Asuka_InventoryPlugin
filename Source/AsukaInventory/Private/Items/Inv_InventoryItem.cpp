@@ -6,6 +6,7 @@
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
 #include "Net/UnrealNetwork.h"
+#include "Widgets/Composite/Inv_CompositeBase.h"
 
 void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -19,6 +20,7 @@ void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 void UInv_InventoryItem::SetDynamicItemFragments(const TArray<FInstancedStruct>& Fragments)
 {
 	DynamicItemFragments = Fragments;
+	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(), DynamicItemFragments, this);
 }
 
 void UInv_InventoryItem::SetStaticItemManifestAssetId(const FPrimaryAssetId& NewAssetId)
@@ -43,6 +45,20 @@ const FInv_ItemManifest& UInv_InventoryItem::GetItemManifest() const
 void UInv_InventoryItem::SetOwningGridEntityTag(const FGameplayTag& NewTag)
 {
 	OwningGridEntityTag = FGameplayTag(NewTag);
+}
+
+void UInv_InventoryItem::AssimilateInventoryFragments(UInv_CompositeBase* Composite) const
+{
+	for(const auto FragmentTuple : FragmentsMap)
+	{
+		if(const auto* ItemFragment = FragmentTuple.Value->GetPtr<FInv_InventoryItemFragmentAbstract>())
+		{
+			Composite->ApplyFunction([ItemFragment](UInv_CompositeBase* Child)
+			{
+				ItemFragment->Assimilate(Child);
+			});
+		}
+	}
 }
 
 bool UInv_InventoryItem::IsStackable() const
@@ -109,10 +125,15 @@ void UInv_InventoryItem::OnRep_DynamicItemFragments()
 
 FInstancedStruct* UInv_InventoryItem::GetFragmentStructByTagMutable(const FGameplayTag& FragmentType)
 {
+	return GetFragmentStructByTagMutable(DynamicItemFragments, FragmentsMap, FragmentType);
+}
+
+FInstancedStruct* UInv_InventoryItem::GetFragmentStructByTagMutable(TArray<FInstancedStruct>& DynamicFragments, TMap<FGameplayTag, FInstancedStruct*>& FragmentsMap, const FGameplayTag& FragmentType)
+{
 	if (FInstancedStruct** Fragment = FragmentsMap.Find(FragmentType))
 	{
 		auto FoundFragment = (*Fragment)->GetPtr<FInv_ItemFragment>();
-		auto DynamicFragment = DynamicItemFragments.FindByPredicate([FoundFragment](const FInstancedStruct& Element)
+		auto DynamicFragment = DynamicFragments.FindByPredicate([FoundFragment](const FInstancedStruct& Element)
 			{
 				if (const FInv_ItemFragment* ElementFragment = Element.GetPtr<FInv_ItemFragment>())
 				{
@@ -123,8 +144,8 @@ FInstancedStruct* UInv_InventoryItem::GetFragmentStructByTagMutable(const FGamep
 
 		if (!DynamicFragment && FoundFragment->IsDynamicFragment())
 		{
-			const int32 index = DynamicItemFragments.Add(*(*Fragment));
-			FragmentsMap.FindOrAdd(FragmentType) = &DynamicItemFragments[index];
+			const int32 index = DynamicFragments.Add(*(*Fragment));
+			FragmentsMap.FindOrAdd(FragmentType) = &DynamicFragments[index];
 			Fragment = FragmentsMap.Find(FragmentType);
 		}
 		return (*Fragment);

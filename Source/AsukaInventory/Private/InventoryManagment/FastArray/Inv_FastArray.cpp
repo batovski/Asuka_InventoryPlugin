@@ -66,7 +66,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
-
+	OnItemAdded.Broadcast(NewEntry.Item);
 	return NewEntry.Item;
 }
 
@@ -83,6 +83,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_InventoryItem* Item)
 		ListInterface->AddRepSubObj(NewEntry.Item);
 	}
 	MarkItemDirty(NewEntry);
+	OnItemAdded.Broadcast(NewEntry.Item);
 	return NewEntry.Item;
 }
 
@@ -100,6 +101,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComp
 	ExternalComponent->AddRepSubObj(NewEntry.Item);
 
 	MarkItemDirty(NewEntry);
+	OnItemAdded.Broadcast(NewEntry.Item);
 	return NewEntry.Item;
 }
 UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& StaticItemManifestID, const FInv_ItemAddingOptions& NewItemAddingOptions, const TArray<FInstancedStruct>& DynamicFragments)
@@ -117,6 +119,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& Sta
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
 
+	OnItemAdded.Broadcast(NewEntry.Item);
 	return NewEntry.Item;
 }
 
@@ -138,6 +141,9 @@ bool FInv_InventoryFastArray::ChangeEntryGridIndex(UInv_InventoryItem* Item, con
 	if (NewGameplayTag != FGameplayTag::EmptyTag)
 		FoundEntry->Item->SetOwningGridEntityTag(NewGameplayTag);
 	MarkItemDirty(*FoundEntry);
+
+	OnItemChanged.Broadcast(FoundEntry->Item);
+
 	return true;
 }
 

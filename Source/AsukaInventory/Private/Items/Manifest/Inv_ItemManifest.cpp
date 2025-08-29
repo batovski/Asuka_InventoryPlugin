@@ -16,15 +16,3 @@ void FInv_ItemManifest::Manifest()
 		Fragment.GetMutable<FInv_ItemFragment>().Manifest();
 	}
 }
-
-void FInv_ItemManifest::AssimilateInventoryFragments(UInv_CompositeBase* Composite) const
-{
-	const auto& ItemFragments = GetAllFragmentsOfType<FInv_InventoryItemFragmentAbstract>();
-	for(const auto* Fragment : ItemFragments)
-	{
-		Composite->ApplyFunction([Fragment](UInv_CompositeBase* Child)
-		{
-			Fragment->Assimilate(Child);
-		});
-	}
-}

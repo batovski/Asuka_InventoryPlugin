@@ -95,6 +95,7 @@ public:
 	FNoRoomInInventory NoRoomInInventory;
 	FItemEquipStatusChanges OnItemEquipped;
 	FItemEquipStatusChanges OnItemUnEquipped;
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FInventoryMenuToggled OnInventoryMenuToggled;
 
 protected:

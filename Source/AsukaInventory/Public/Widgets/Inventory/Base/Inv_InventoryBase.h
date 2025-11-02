@@ -7,25 +7,36 @@
 #include "Types/Inv_GridTypes.h"
 #include "Inv_InventoryBase.generated.h"
 
+class IInv_ItemListInterface;
+class UInv_InventoryGrid;
 class UInv_HoverItem;
 class UInv_ItemComponent;
 class UInv_InventoryItem;
 /**
  * 
  */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryMenuToggled, bool, bIsOpen);
+
 UCLASS()
 class ASUKAINVENTORY_API UInv_InventoryBase : public UUserWidget
 {
 	GENERATED_BODY()
 public:
 	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_ItemComponent* ItemComponent) const { return  FInv_SlotAvailabilityResult(); }
-	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride = -1, const int32 GridIndex = -1, const EInv_ItemCategory GridCategory = EInv_ItemCategory::None) const { return  FInv_SlotAvailabilityResult(); }
+	virtual FInv_SlotAvailabilityResult HasRoomForItem(UInv_InventoryItem* Item, UInv_InventoryGrid* TargetGrid, const int32 StackAmountOverride = -1, const int32 GridIndex = -1) const { return  FInv_SlotAvailabilityResult(); }
 	virtual void OnItemHovered(UInv_InventoryItem* Item) {};
 	virtual void OnItemUnhovered() {};
+	virtual void AssignHoverItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* InventoryItem){};
+	virtual void ClearHoverItem() {};
 	virtual bool HasHoverItem() const { return false; }
 	virtual UInv_HoverItem* GetHoverItem() const { return nullptr; }
+	virtual void RotateHoverItem() {};
 	virtual void SetHoverItem(UInv_HoverItem* HoverItem) {}
-	virtual float GetTileSize() const { return 0.f; }
 	virtual void ShowInventoryCursor() {};
 	virtual void HideInventoryCursor() {};
+
+	virtual void ToggleInventoryMenu() {};
+
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
+	FInventoryMenuToggled OnInventoryMenuToggled;
 };

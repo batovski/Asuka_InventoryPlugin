@@ -50,6 +50,7 @@ public:
 	void SetAvailable(bool bInAvailable) { bAvailable = bInAvailable; }
 
 	FGridSlotEvent OnGridSlotClicked;
+	FGridSlotEvent OnGridSlotDoubleClicked;
 	FGridSlotEvent OnGridSlotHovered;
 	FGridSlotEvent OnGridSlotUnHovered;
 private:

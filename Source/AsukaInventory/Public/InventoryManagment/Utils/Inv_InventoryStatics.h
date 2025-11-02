@@ -3,13 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/AssetManager.h"
-#include "InventoryManagment/ItemData/Inv_ItemDataAsset.h"
 #include "Items/Components/Inv_ItemComponent.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Widgets/Utils/Inv_WidgetUtils.h"
 #include "Inv_InventoryStatics.generated.h"
 
+struct FInv_ExternalInventorySpawnParams;
+class UInv_EquipmentComponent;
 class AInv_EquipActor;
 class UInv_ExternalInventoryComponent;
 class UInv_InventoryBase;
@@ -25,6 +25,8 @@ class ASUKAINVENTORY_API UInv_InventoryStatics : public UBlueprintFunctionLibrar
 public:
 	UFUNCTION(BlueprintCallable, Category="Inventory")
 	static UInv_InventoryComponent* GetInventoryComponent(const APlayerController* PlayerController);
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	static UInv_EquipmentComponent* GetEquipmentComponent(const APlayerController* PlayerController);
 
 	static EInv_ItemCategory GetItemCategoryFromItemComp(const UInv_ItemComponent* ItemTag)
 	{
@@ -80,9 +82,10 @@ public:
 	static UInv_InventoryItem* CreateInventoryItemFromManifest(const FPrimaryAssetId& ItemId, UObject* WorldContextObject, const TArray<FInstancedStruct>& DynamicFragments = {});
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
-	static AActor* CreateExternalInventoryActor(UObject* WorldContextObject, 
-	UInv_InventoryComponent* InventoryComponent, 
-    const FString& PickupMessage,
+	static AActor* CreateExternalInventoryActor(UObject* WorldContextObject,
+	UInv_InventoryComponent* AuthoritativeInventoryComponent,
+	TArray<TScriptInterface<IInv_ItemListInterface>> InventoryComponentList,
+	FInv_ExternalInventorySpawnParams SpawnParams,
     TSubclassOf<AActor> ActorClass,
     const FTransform& SpawnTransform);
 };

@@ -12,18 +12,26 @@
 #include "Items/Fragments/Inv_ItemFragment.h"
 #include "Net/UnrealNetwork.h"
 
+UInv_EquipmentComponent::UInv_EquipmentComponent() : EquipmentItemsList(this)
+{
+	PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
+	bReplicateUsingRegisteredSubObjectList = true;
+}
+
 
 void UInv_EquipmentComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	EquippedActors.SetOwnerComponent(this);
 	InitPlayerController();
-	SetIsReplicated(true);
 }
 
 void UInv_EquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ThisClass, EquippedActors);
+	DOREPLIFETIME(ThisClass, EquipmentItemsList);
 }
 
 void UInv_EquipmentComponent::InitPlayerController()
@@ -35,10 +43,7 @@ void UInv_EquipmentComponent::InitPlayerController()
 		{
 			OnPossessedPawnChanged(nullptr, OwnerCharacter);
 		}
-		else
-		{
-			OwningPlayerController->OnPossessedPawnChanged.AddDynamic(this, &ThisClass::OnPossessedPawnChanged);
-		}
+		OwningPlayerController->OnPossessedPawnChanged.AddDynamic(this, &ThisClass::OnPossessedPawnChanged);
 	}
 }
 
@@ -56,17 +61,13 @@ void UInv_EquipmentComponent::InitInventoryComponent()
 	InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(OwningPlayerController.Get());
 	if (!InventoryComponent.IsValid()) return;
 
-	if(!InventoryComponent->GetInventoryListMutable().OnItemRemoved.IsAlreadyBound(this, &ThisClass::OnItemRemoved))
+	if(!EquipmentItemsList.OnItemAdded.IsAlreadyBound(this, &ThisClass::OnItemEquipped))
 	{
-		InventoryComponent->GetInventoryListMutable().OnItemRemoved.AddDynamic(this, &ThisClass::OnItemRemoved);
+		EquipmentItemsList.OnItemAdded.AddDynamic(this, &ThisClass::OnItemEquipped);
 	}
-	if(!InventoryComponent->OnItemEquipped.IsAlreadyBound(this,&ThisClass::OnItemEquipped))
+	if(!EquipmentItemsList.OnItemRemoved.IsAlreadyBound(this,&ThisClass::OnItemUnEquipped))
 	{
-		InventoryComponent->OnItemEquipped.AddDynamic(this, &ThisClass::OnItemEquipped);
-	}
-	if(!InventoryComponent->OnItemUnEquipped.IsAlreadyBound(this,&ThisClass::OnItemUnEquipped))
-	{
-		InventoryComponent->OnItemUnEquipped.AddDynamic(this, &ThisClass::OnItemUnEquipped);
+		EquipmentItemsList.OnItemRemoved.AddDynamic(this, &ThisClass::OnItemUnEquipped);
 	}
 }
 
@@ -83,18 +84,41 @@ AInv_EquipActor* UInv_EquipmentComponent::SpawnedEquippedActor(FInv_EquipmentFra
 
 AInv_EquipActor* UInv_EquipmentComponent::FindEquippedActorByType(const FGameplayTag& EquipmentType)
 {
-	const auto FoundActor = EquippedActors.FindByPredicate([&EquipmentType](const AInv_EquipActor* Actor)
+	return EquippedActors.FindByType(EquipmentType);
+}
+
+UInv_InventoryItem* UInv_EquipmentComponent::AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID,
+	const TArray<FInstancedStruct>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions)
+{
+	return EquipmentItemsList.AddEntry(StaticItemManifestID, NewItemAddingOptions, DynamicFragments);
+}
+
+void UInv_EquipmentComponent::ChangeItemGridIndex_Implementation(UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions)
+{
+	EquipmentItemsList.ChangeEntryGridIndex(Item, NewItemAddingOptions.GridIndex);
+}
+
+void UInv_EquipmentComponent::MarkItemDirty_Implementation(UInv_InventoryItem* Item)
+{
+	EquipmentItemsList.MarkEntryDirty(Item);
+}
+
+void UInv_EquipmentComponent::AddRepSubObj(UObject* SubObj)
+{
+	if (IsUsingRegisteredSubObjectList() && IsReadyForReplication() && IsValid(SubObj))
 	{
-		return Actor && Actor->GetEquipmentType().MatchesTagExact(EquipmentType);
-		});
-	return FoundActor ? FoundActor->Get() : nullptr;
+		// Add the sub-object to the replication list
+		AddReplicatedSubObject(SubObj);
+	}
 }
 
 void UInv_EquipmentComponent::RemoveEquippedActor(const FGameplayTag& EquipmentType)
 {
 	if(AInv_EquipActor* EquippedActor = FindEquippedActorByType(EquipmentType); IsValid(EquippedActor))
 	{
-		EquippedActors.Remove(EquippedActor);
+		// Remove from fast array (this will automatically broadcast the delegate)
+		EquippedActors.RemoveEquippedActor(EquippedActor);
+		
 		EquippedActor->Destroy();
 	}
 }
@@ -103,7 +127,6 @@ void UInv_EquipmentComponent::OnItemEquipped(UInv_InventoryItem* EquippedItem)
 {
 	if (!IsValid(EquippedItem)) return;
 	if (!OwningPlayerController->HasAuthority()) return;
-
 	FInv_ItemManifest& ItemManifest = EquippedItem->GetItemManifestMutable();
 	FInv_EquipmentFragment* EquipmentFragment = EquippedItem->GetFragmentStructByTagMutable<FInv_EquipmentFragment>(FragmentTags::EquipmentFragment);
 	if (!EquipmentFragment) return;
@@ -114,7 +137,8 @@ void UInv_EquipmentComponent::OnItemEquipped(UInv_InventoryItem* EquippedItem)
 
 	EquipmentFragment->OnEquip(OwningPlayerController.Get());
 
-	EquippedActors.Add(NewEquippedActor);
+	// Add to fast array (this will automatically broadcast the delegate)
+	EquippedActors.AddEquippedActor(NewEquippedActor);
 
 	const FInv_SkeletalMeshFragment* SkeletalMeshFragment = EquippedItem->GetFragmentStructByTag<FInv_SkeletalMeshFragment>(FragmentTags::SkeltalMeshFragment);
 	if (!SkeletalMeshFragment) return;
@@ -142,12 +166,100 @@ void UInv_EquipmentComponent::OnItemUnEquipped(UInv_InventoryItem* UnEquippedIte
 
 void UInv_EquipmentComponent::OnItemRemoved(UInv_InventoryItem* UnEquippedItem)
 {
-	const auto ActorToUnequip = EquippedActors.FindByPredicate([UnEquippedItem](const AInv_EquipActor* Actor)
+	const FEquippedActorEntry* ActorToUnequip = EquippedActors.GetItems().FindByPredicate([UnEquippedItem](const FEquippedActorEntry& Entry)
 	{
-			return Actor->GetOwningItem() == UnEquippedItem;
+		return Entry.EquippedActor && Entry.EquippedActor->GetOwningItem() == UnEquippedItem;
 	});
 	if(ActorToUnequip)
 	{
 		OnItemUnEquipped(UnEquippedItem);
 	}
+}
+
+// Fast Array Serializer implementations
+
+void FEquippedActorFastArray::SetOwnerComponent(UInv_EquipmentComponent* InOwnerComponent)
+{
+	OwnerComponent = InOwnerComponent;
+}
+
+void FEquippedActorFastArray::AddEquippedActor(AInv_EquipActor* NewActor)
+{
+	if (!IsValid(NewActor))
+	{
+		return;
+	}
+
+	FEquippedActorEntry NewEntry(NewActor);
+	Items.Add(NewEntry);
+	MarkItemDirty(NewEntry);
+
+	// Broadcast on server immediately
+	if (OwnerComponent.IsValid())
+	{
+		OwnerComponent->OnEquippedActorAdded.Broadcast(NewActor);
+	}
+}
+
+bool FEquippedActorFastArray::RemoveEquippedActor(AInv_EquipActor* ActorToRemove)
+{
+	if (!IsValid(ActorToRemove))
+	{
+		return false;
+	}
+
+	const int32 RemovedIndex = Items.IndexOfByPredicate([ActorToRemove](const FEquippedActorEntry& Entry)
+	{
+		return Entry.EquippedActor == ActorToRemove;
+	});
+
+	if (RemovedIndex != INDEX_NONE)
+	{
+		Items.RemoveAt(RemovedIndex);
+		MarkArrayDirty();
+
+		// Broadcast on server immediately
+		if (OwnerComponent.IsValid())
+		{
+			OwnerComponent->OnEquippedActorRemoved.Broadcast(ActorToRemove);
+		}
+		return true;
+	}
+	return false;
+}
+
+AInv_EquipActor* FEquippedActorFastArray::FindByType(const FGameplayTag& EquipmentType) const
+{
+	const FEquippedActorEntry* FoundEntry = Items.FindByPredicate([&EquipmentType](const FEquippedActorEntry& Entry)
+	{
+		return Entry.EquippedActor && Entry.EquippedActor->GetEquipmentType().MatchesTagExact(EquipmentType);
+	});
+
+	return FoundEntry ? FoundEntry->EquippedActor : nullptr;
+}
+
+// Fast Array Item implementations
+
+void FEquippedActorEntry::PostReplicatedAdd(const FEquippedActorFastArray& InArraySerializer)
+{
+	// Called when this item is added during replication on clients
+	if (InArraySerializer.OwnerComponent.IsValid() && IsValid(EquippedActor))
+	{
+		InArraySerializer.OwnerComponent->OnEquippedActorAdded.Broadcast(EquippedActor);
+	}
+}
+
+void FEquippedActorEntry::PreReplicatedRemove(const FEquippedActorFastArray& InArraySerializer)
+{
+	// Called when this item is removed during replication on clients
+	if (InArraySerializer.OwnerComponent.IsValid())
+	{
+		InArraySerializer.OwnerComponent->OnEquippedActorRemoved.Broadcast(EquippedActor);
+	}
+}
+
+void FEquippedActorEntry::PostReplicatedChange(const FEquippedActorFastArray& InArraySerializer)
+{
+	// Called when this item is changed during replication on clients
+	// This is typically used when the item's properties change but the item itself doesn't get added/removed
 }

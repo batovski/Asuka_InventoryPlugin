@@ -9,24 +9,25 @@
 
 #include "Inv_HoverItem.generated.h"
 
+class IInv_ItemListInterface;
 class UInv_InventoryGrid;
 struct FGameplayTag;
 class UTextBlock;
 class UInv_InventoryItem;
 class UImage;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHoverItemDropped, UInv_InventoryItem*, Item);
 /**
  * 
  */
+
+
 UCLASS()
 class ASUKAINVENTORY_API UInv_HoverItem : public UUserWidget
 {
 	GENERATED_BODY()
 public:
-	void SetImageBrush(const FSlateBrush& Brush) const;
+	void SetImageBrush(const FSlateBrush& Brush, EInv_ItemAlignment Alignment);
 	void UpdateStackCount(const int32 NewStackCount);
-
 	FGameplayTag GetItemType() const;
 	int32 GetStackCount() const { return StackCount; }
 	bool IsStackable() const { return bIsStackable; }
@@ -38,11 +39,11 @@ public:
 	UInv_InventoryItem* GetInventoryItem() const;
 	void SetInventoryItem(UInv_InventoryItem* Item);
 	FIntPoint GetGridDimensions() const { return GridDimensions; }
+	const TScriptInterface<IInv_ItemListInterface>& GetOwningInventory() const { return OwningInventory; }
+	void SetOwningInventory(const TScriptInterface<IInv_ItemListInterface>& Inventory);
 
-	void SetOwningGrid(UInv_InventoryGrid* Grid);
-	UInv_InventoryGrid* GetOwningGrid() const;
-
-	FHoverItemDropped OnHoverItemPutDown;
+	UFUNCTION()
+	void UpdateImage(FGameplayTag ModifiedFragment);
 
 private:
 
@@ -55,7 +56,7 @@ private:
 	int32 PreviousGridIndex;
 	FIntPoint GridDimensions;
 	TWeakObjectPtr<UInv_InventoryItem> InventoryItem {nullptr};
+	TScriptInterface<IInv_ItemListInterface> OwningInventory{ nullptr };
 	bool bIsStackable{ false };
 	int32 StackCount {0};
-	TWeakObjectPtr<UInv_InventoryGrid> OwningGrid {nullptr};
 };

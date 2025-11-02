@@ -8,9 +8,12 @@
 #include "GameplayTagContainer.h"
 #include "Inv_FragmentTags.h"
 #include "StructUtils/InstancedStruct.h"
+#include "Types/Inv_GridTypes.h"
 #include "Inv_ItemFragment.generated.h"
 
 
+class UInv_ExternalInventoryComponent;
+class UInv_SpatialInventory;
 class UGameplayEffect;
 class UGameplayAbility;
 class AInv_EquipActor;
@@ -32,28 +35,41 @@ struct FInv_ItemFragment
 	FInv_ItemFragment& operator=(FInv_ItemFragment&& Other) = default; //move assignment
 	virtual ~FInv_ItemFragment() {};
 
-	virtual void Manifest() {}
+	virtual void Manifest(UObject* Owner) {}
 
 	FGameplayTag GetFragmentTag() const { return FragmentTag; }
 	void SetFragmentTag(FGameplayTag NewTag) { FragmentTag = NewTag; }
 
 	bool IsDynamicFragment() const { return bDynamicFragment; }
+	bool ShouldReplicateFromStart() const { return bShouldReplicateFromStart; }
 
 protected:
+	UPROPERTY(EditAnywhere, Category = "Fragment")
+	bool bOverrideFragmentTag = false;
+
+	UPROPERTY(EditAnywhere, Category = "Fragment", meta = (EditCondition = "bOverrideFragmentTag", EditConditionHides))
 	FGameplayTag FragmentTag = FGameplayTag::EmptyTag;
 
 	bool bDynamicFragment{ false }; // If true, this fragment is dynamic and can be modified at runtime will be synced with the item component.
+	bool bShouldReplicateFromStart{ false };
 };
 
 USTRUCT(BlueprintType)
 struct FInv_GridFragment : public FInv_ItemFragment
 {
 	GENERATED_BODY()
-	FInv_GridFragment() {FragmentTag = FragmentTags::GridFragment;}
+	FInv_GridFragment()
+	{
+		FragmentTag = FragmentTags::GridFragment;
+		bDynamicFragment = true;
+	}
 	FIntPoint GetGridSize() const { return GridSize; }
 	void SetGridSize(const FIntPoint& NewSize) { GridSize = NewSize; }
 	float GetGridPadding() const { return GridPadding; }
 	void SetGridPadding(float NewPadding) { GridPadding = NewPadding; }
+	void RotateGrid();
+	const EInv_ItemAlignment& GetAlignment() const { return Alignment; }
+
 private:
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
@@ -61,6 +77,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	float GridPadding{ 0.f };
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	EInv_ItemAlignment Alignment{ EInv_ItemAlignment::Horizontal };
 };
 
 USTRUCT(meta = (HiddenByDefault))
@@ -134,7 +153,7 @@ struct FInv_LabeledNumberFragment : public FInv_UIElementFragmentAbstract
 {
 	GENERATED_BODY()
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
-	virtual void Manifest() override;
+	virtual void Manifest(UObject* Owner) override;
 	float GetValue() const { return Value; }
 
 	bool bRandomizeOnManifest{ false };
@@ -167,7 +186,7 @@ struct FInv_ConsumableFragment : public FInv_InventoryItemFragmentAbstract
 {
 	GENERATED_BODY()
 	FInv_ConsumableFragment() { FragmentTag = FragmentTags::ConsumableFragment; }
-	virtual void Manifest() override;
+	virtual void Manifest(UObject* Owner) override;
 	virtual void OnConsume(APlayerController* PC);
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
 private:
@@ -188,9 +207,14 @@ USTRUCT(BlueprintType)
 struct FInv_ImageFragment : public FInv_InventoryItemFragmentAbstract
 {
 	GENERATED_BODY()
-	FInv_ImageFragment() { FragmentTag = FragmentTags::IconFragment; }
+	FInv_ImageFragment()
+	{
+		FragmentTag = FragmentTags::IconFragment;
+		bDynamicFragment = true;
+	}
 	UTexture2D* GetIcon() const { return Icon; }
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
+	void RotateIcon();
 private:
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	TObjectPtr<UTexture2D> Icon{ nullptr };
@@ -203,6 +227,7 @@ USTRUCT(BlueprintType)
 struct FInv_TextFragment : public FInv_UIElementFragmentAbstract
 {
 	GENERATED_BODY()
+	FInv_TextFragment() { bOverrideFragmentTag = true; }
 	FText GetText() const { return FragmentText; }
 	void SetText(const FText& NewText) { FragmentText = NewText; }
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
@@ -278,7 +303,7 @@ struct FInv_EquipmentFragment : public FInv_InventoryItemFragmentAbstract
 {
 	GENERATED_BODY()
 	FInv_EquipmentFragment() { FragmentTag = FragmentTags::EquipmentFragment; }
-	virtual void Manifest() override;
+	virtual void Manifest(UObject* Owner) override;
 	virtual void OnEquip(APlayerController* PC);
 	virtual void OnUnEquip(APlayerController* PC);
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
@@ -290,6 +315,10 @@ struct FInv_EquipmentFragment : public FInv_InventoryItemFragmentAbstract
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory", meta = (ExcludeBaseStruct))
 	TArray<TInstancedStruct<FInv_EquipModifier>> EquipModifiers;
+
+protected:
+	TWeakObjectPtr<AInv_EquipActor> EquippedActor{ nullptr };
+
 private:
 	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (ExcludeBaseStruct))
 	TSubclassOf<AInv_EquipActor> EquipActorClass{nullptr};
@@ -297,8 +326,6 @@ private:
 	FName SocketAttachPoint{NAME_None};
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FGameplayTag EquipmentType{ FGameplayTag::EmptyTag };
-
-	TWeakObjectPtr<AInv_EquipActor> EquippedActor{nullptr};
 };
 
 USTRUCT(BlueprintType)
@@ -313,3 +340,25 @@ private:
 	TSoftObjectPtr<USkeletalMesh> SkeletalMesh{ nullptr };
 };
 
+USTRUCT(BlueprintType)
+struct FInv_ContainerFragment : public FInv_ItemFragment
+{
+	GENERATED_BODY()
+	FInv_ContainerFragment()
+	{
+		FragmentTag = FragmentTags::ContainerFragment;
+		bDynamicFragment = true;
+		bShouldReplicateFromStart = true;
+	}
+	virtual void Manifest(UObject* Owner) override;
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	FIntPoint ContainerDimension{ 1, 1 };
+
+	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (Categories = "InventoryGrid"))
+	FGameplayTag GridEntityTag;
+
+	UPROPERTY()
+	TObjectPtr<UInv_ExternalInventoryComponent> ContainerInventoryComponent{ nullptr };
+	TWeakObjectPtr<UInv_SpatialInventory> SpatialInventoryMenu{ nullptr };
+};

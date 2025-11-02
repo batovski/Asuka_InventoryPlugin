@@ -58,11 +58,11 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 	check(OwnerComponent);
 	AActor* OwnerActor = OwnerComponent->GetOwner();
 	check(OwnerActor->HasAuthority());
-	UInv_InventoryComponent* IC = Cast<UInv_InventoryComponent>(OwnerComponent);
-	if (!IsValid(IC)) return nullptr;
+	IInv_ItemListInterface* IC = Cast<IInv_ItemListInterface>(OwnerComponent);
+	if (!IC) return nullptr;
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
-	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(ItemComponent->GetStaticItemManifestID(), ItemComponent, ItemComponent->GetDynamicFragmentsMutable());
+	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(ItemComponent->GetStaticItemManifestID(), OwnerComponent, ItemComponent->GetDynamicFragmentsMutable());
 
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
@@ -97,7 +97,6 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComp
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, ExternalComponent, DynamicFragments);
 	NewEntry.Item->SetItemIndex(NewItemAddingOptions.GridIndex);
-	NewEntry.Item->SetOwningGridEntityTag(NewItemAddingOptions.GridEntityTag);
 	ExternalComponent->AddRepSubObj(NewEntry.Item);
 
 	MarkItemDirty(NewEntry);
@@ -109,13 +108,12 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& Sta
 	check(OwnerComponent);
 	AActor* OwnerActor = OwnerComponent->GetOwner();
 	check(OwnerActor->HasAuthority());
-	UInv_InventoryComponent* IC = Cast<UInv_InventoryComponent>(OwnerComponent);
-	if (!IsValid(IC)) return nullptr;
+	IInv_ItemListInterface* IC = Cast<IInv_ItemListInterface>(OwnerComponent);
+	if (!IC) return nullptr;
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
-	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, IC, DynamicFragments);
+	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, OwnerComponent, DynamicFragments);
 	NewEntry.Item->SetItemIndex(NewItemAddingOptions.GridIndex);
-	NewEntry.Item->SetOwningGridEntityTag(NewItemAddingOptions.GridEntityTag);
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
 
@@ -138,8 +136,6 @@ bool FInv_InventoryFastArray::ChangeEntryGridIndex(UInv_InventoryItem* Item, con
 		return false;
 	}
 	FoundEntry->Item->SetItemIndex(NewGridIndex);
-	if (NewGameplayTag != FGameplayTag::EmptyTag)
-		FoundEntry->Item->SetOwningGridEntityTag(NewGameplayTag);
 	MarkItemDirty(*FoundEntry);
 
 	OnItemChanged.Broadcast(FoundEntry->Item);

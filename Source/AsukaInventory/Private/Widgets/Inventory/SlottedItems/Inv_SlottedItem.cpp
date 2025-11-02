@@ -10,7 +10,18 @@
 
 FReply UInv_SlottedItem::NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	OnSlottedItemClicked.Broadcast(GridIndex, MouseEvent);
+	GetWorld()->GetTimerManager().ClearTimer(DoubleClickTimerHandle);
+	GetWorld()->GetTimerManager().SetTimer(DoubleClickTimerHandle, [this, MouseEvent]()
+		{
+			OnSlottedItemClicked.Broadcast(GridIndex, MouseEvent);
+		}, DoubleClickTreshold, false);
+	return FReply::Handled();
+}
+
+FReply UInv_SlottedItem::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	GetWorld()->GetTimerManager().ClearTimer(DoubleClickTimerHandle);
+	OnSlottedItemDoubleClicked.Broadcast(GridIndex, InMouseEvent);
 	return FReply::Handled();
 }
 

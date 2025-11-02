@@ -21,6 +21,9 @@ void UInv_ExternalInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetim
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ThisClass, InventoryList);
 	DOREPLIFETIME(ThisClass, InitialItemsIDs);
+	DOREPLIFETIME(ThisClass, Rows);
+	DOREPLIFETIME(ThisClass, Columns);
+	DOREPLIFETIME(ThisClass, GridNameText);
 }
 
 void UInv_ExternalInventoryComponent::OpenItemsContainer(APlayerController* PlayerController)
@@ -28,18 +31,19 @@ void UInv_ExternalInventoryComponent::OpenItemsContainer(APlayerController* Play
 	check(PlayerController);
 	UInv_InventoryComponent* PlayerInventoryComponent = UInv_InventoryStatics::GetInventoryComponent(PlayerController);
 	check(PlayerInventoryComponent);
-	if (PlayerInventoryComponent->OnInventoryMenuToggled.IsAlreadyBound(this, &UInv_ExternalInventoryComponent::OnInventoryMenuToggled)) { return; }
+	if (PlayerInventoryComponent->GetInventoryMenu()->OnInventoryMenuToggled.IsAlreadyBound(this, &UInv_ExternalInventoryComponent::OnInventoryMenuToggled)) { return; }
 	UsingPlayerController = PlayerController;
 
-	PlayerInventoryComponent->OpenInventoryMenu();
 	UInv_InventoryBase* InventoryWidget = UInv_InventoryStatics::GetInventoryWidget(PlayerController);
 	if(!InventoryWidget) return;
 
 	UInv_SpatialInventory* SpatialInventoryWidget = Cast<UInv_SpatialInventory>(InventoryWidget);
 	if (!SpatialInventoryWidget) return;
 
-	PlayerInventoryComponent->OnInventoryMenuToggled.AddDynamic(this, &UInv_ExternalInventoryComponent::OnInventoryMenuToggled);
-	SpatialInventoryWidget->InitLootGrid(this, InventoryList.GetAllItems());
+	SpatialInventoryWidget->OpenInventoryMenu();
+
+	PlayerInventoryComponent->GetInventoryMenu()->OnInventoryMenuToggled.AddDynamic(this, &UInv_ExternalInventoryComponent::OnInventoryMenuToggled);
+	SpatialInventoryWidget->AddDynamicGrid(GridEntityTag, this, InventoryList.GetAllItems());
 }
 
 void UInv_ExternalInventoryComponent::Server_AddNewItem_Implementation(const FPrimaryAssetId StaticItemManifestID)
@@ -74,7 +78,7 @@ UInv_InventoryItem* UInv_ExternalInventoryComponent::AddItemToList_Implementatio
 void UInv_ExternalInventoryComponent::ChangeItemGridIndex_Implementation(UInv_InventoryItem* Item,
 	const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
-	InventoryList.ChangeEntryGridIndex(Item, NewItemAddingOptions.GridIndex, NewItemAddingOptions.GridEntityTag);
+	InventoryList.ChangeEntryGridIndex(Item, NewItemAddingOptions.GridIndex);
 }
 
 void UInv_ExternalInventoryComponent::MarkItemDirty_Implementation(UInv_InventoryItem* Item)
@@ -100,7 +104,7 @@ void UInv_ExternalInventoryComponent::OnInventoryMenuToggled(const bool IsOpen)
 	{
 		UInv_InventoryComponent* PlayerInventoryComponent = UInv_InventoryStatics::GetInventoryComponent(UsingPlayerController.Get());
 		check(PlayerInventoryComponent);
-		PlayerInventoryComponent->OnInventoryMenuToggled.RemoveDynamic(this, &UInv_ExternalInventoryComponent::OnInventoryMenuToggled);
+		PlayerInventoryComponent->GetInventoryMenu()->OnInventoryMenuToggled.RemoveDynamic(this, &UInv_ExternalInventoryComponent::OnInventoryMenuToggled);
 	}
 }
 

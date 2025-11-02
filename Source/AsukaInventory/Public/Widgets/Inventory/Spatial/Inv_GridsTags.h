@@ -11,21 +11,10 @@ namespace InventoryGrid
 	{
 		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Backpack);
 
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Consumables);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Armor);
 
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Craftables);
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Pockets);
 
-		namespace Equipment
-		{
-			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon);
-			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Armor);
-			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Helmet);
-		}
-
-	}
-
-	namespace External
-	{
-		UE_DECLARE_GAMEPLAY_TAG_EXTERN(LootGrid)
+		UE_DECLARE_GAMEPLAY_TAG_EXTERN(Loot);
 	}
 }

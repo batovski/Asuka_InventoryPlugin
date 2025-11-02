@@ -9,19 +9,10 @@ namespace InventoryGrid
 	{
 		UE_DEFINE_GAMEPLAY_TAG(Backpack, "InventoryGrid.Player.Backpack");
 
-		UE_DEFINE_GAMEPLAY_TAG(Consumables, "InventoryGrid.Player.Consumables");
+		UE_DEFINE_GAMEPLAY_TAG(Armor, "InventoryGrid.Player.Armor");
 
-		UE_DEFINE_GAMEPLAY_TAG(Craftables, "InventoryGrid.Player.Craftables");
-		namespace Equipment
-		{
-			UE_DEFINE_GAMEPLAY_TAG(Weapon, "InventoryGrid.Player.Equipment.Weapon");
-			UE_DEFINE_GAMEPLAY_TAG(Armor, "InventoryGrid.Player.Equipment.Armor");
-			UE_DEFINE_GAMEPLAY_TAG(Helmet, "InventoryGrid.Player.Equipment.Helmet");
-		}
-	}
+		UE_DEFINE_GAMEPLAY_TAG(Pockets, "InventoryGrid.Player.Pockets");
 
-	namespace External
-	{
-		UE_DEFINE_GAMEPLAY_TAG(LootGrid, "InventoryGrid.External.LootGrid");
+		UE_DEFINE_GAMEPLAY_TAG(Loot, "InventoryGrid.Player.Loot");
 	}
 }

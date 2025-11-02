@@ -9,6 +9,10 @@
 #include "Inv_InventoryGrid.generated.h"
 
 
+class UTextBlock;
+class UInv_InventoryBase;
+class USizeBox;
+class IInv_InventoryInterface;
 struct FInv_StackableFragment;
 class IInv_ItemListInterface;
 enum class EInv_GridSlotState : uint8;
@@ -27,10 +31,6 @@ class UInv_GridSlot;
  * 
  */
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FHoverItemAssigned, const UInv_InventoryItem*, Item);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FHoverItemUnAssigned, const UInv_InventoryItem*, Item);
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(FItemEquipped, UInv_InventoryItem*, Item, const int32, GridIndex, UInv_InventoryGrid*, OwningGrid);
-
 UCLASS()
 class ASUKAINVENTORY_API UInv_InventoryGrid : public UUserWidget
 {
@@ -44,7 +44,6 @@ public:
 	virtual void RemoveItem(UInv_InventoryItem* Item);
 
 	virtual void NativeOnInitialized() override;
-	EInv_ItemCategory GetItemCategory() const { return ItemCategory; }
 	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_ItemComponent* ItemComponent);
 	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest, const FInv_StackableFragment* StackableFragments = nullptr, const int32 GridIndex = -1);
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
@@ -59,20 +58,23 @@ public:
 
 	UInv_HoverItem* GetHoverItem() const;
 
-	float GetTileSize() const {return TileSize;}
-	void ClearHoverItem();
+	void ClearHoverItem() const;
 
-	void OnHide();
+	virtual void OnHide();
 
 	virtual TScriptInterface<IInv_ItemListInterface> GetGridInventoryInterface() const;
 	const FGameplayTag& GetOwningGridTag() const { return GridEntityTag; }
 
-	FHoverItemAssigned OnHoverItemAssigned;
-	FHoverItemUnAssigned OnHoverItemUnAssigned;
-	FItemEquipped OnItemEquipped;
+	virtual void CreateGrid(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const int32 NewRows,
+		const int32 NewColumns, const FText& NewGridName);
+
+	virtual void BindToOnInventoryToggled(UInv_InventoryBase* MenuBase);
+
+	static float GetTileSize();
+	static FVector2D GetDrawSize(const float TileSize, const FInv_GridFragment* GridFragment);
 
 protected:
-	void DropHoverItemInGrid(UInv_InventoryGrid* InventoryGrid, const int32 GridIndex) const;
+	void DropHoverItemInGrid(const int32 GridIndex) const;
 	void AddItemToIndices(const FInv_SlotAvailabilityResult& Result, UInv_InventoryItem* NewItem);
 
 	void RemoveItemFromGrid(const UInv_InventoryItem* Item, const int32 GridIndex);
@@ -81,22 +83,35 @@ protected:
 
 	virtual UInv_SlottedItem* FindSlottedItem(const UInv_InventoryItem* Item) const;
 
-	virtual bool IsItemCategoryValidForGrid(const EInv_ItemCategory Category) const { return Category == ItemCategory; }
 	virtual void PutDownOnIndex(const int32 GridIndex);
 
 	UFUNCTION()
-	virtual	void OnInventoryMenuToggled(bool IsOpen);
+	virtual	void OnInventoryMenuToggled(bool IsOpen) {};
 
 	UFUNCTION()
 	void ChangeItem(UInv_InventoryItem* Item);
 
-	TWeakObjectPtr<UInv_InventoryComponent> InventoryComponent;
+	TScriptInterface<IInv_ItemListInterface> OwningInventoryComponent;
+	TWeakObjectPtr<UInv_InventoryBase> InventoryMenu;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> Text_GridName;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<USizeBox> SizeBox_GridFrame;
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	FText GridName;
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	int32 Rows;
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	int32 Columns;
 
 private:
 
 	void ConstructGrid();
-	bool MatchesCategory(const UInv_InventoryItem* Item) const;
-	FVector2D GetDrawSize(const FInv_GridFragment* GridFragment) const;
 	void SetSlottedItemImage(const FInv_GridFragment* GridFragment, const FInv_ImageFragment* ImageFragment,
 		const UInv_SlottedItem* SlottedItem) const;
 	void AddItemAtIndex(UInv_InventoryItem* NewItem, const int32 Index, const bool bStackable, const int32 StackAmount);
@@ -115,7 +130,7 @@ private:
 	bool IsUpperLeftSlot(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot) const;
 	bool DoesItemTypeMatch(const UInv_InventoryItem* SubItem, const FGameplayTag& ItemType) const;
 	bool IsInGridBounds(const int32 StartIndex, const FIntPoint& ItemDimensions) const;
-	void MoveHoverItemFromOneGridToAnother(const UInv_InventoryGrid* InventoryGrid, int32 GridIndex) const;
+	void MoveHoverItemFromOneGridToAnother(int32 GridIndex) const;
 
 	FIntPoint GetItemDimensions(const FInv_ItemManifest& Item) const;
 	bool CheckSlotConstraints(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot,
@@ -124,7 +139,7 @@ private:
 	int32 DetermineFillAmountForSlot(const bool bStackable, const int32 MaxStackSize, const int32 AmountToFill, const UInv_GridSlot* GridSlot) const;
 	int32 GetStackAmount(const UInv_GridSlot* GridSlot) const;
 
-	void AssignHoverItem(UInv_InventoryItem* InventoryItem, const int32 GridIndex, const int32 PreviousGridIndex);
+	bool AssignHoverItem(UInv_InventoryItem* InventoryItem, const int32 GridIndex, const int32 PreviousGridIndex);
 	void AddStacks(const FInv_SlotAvailabilityResult& Result);
 	void PutHoverItemBack();
 
@@ -151,11 +166,14 @@ private:
 	void FillInStack(const int32 FillAmount, const int32 Remainder, const int32 GridIndex);
 
 	void CreateItemPopUp(const int32 GridIndex);
+	void CreateItemPopUpGrid(const int32 GridIndex);
 
 	bool IsItemPresentedAsSlottedItem(const UInv_InventoryItem* Item) const;
 
 	UFUNCTION()
 	void OnSlottedItemClicked(int32 GridIndex, const FPointerEvent& MouseEvent);
+	UFUNCTION()
+	void OnSlottedItemDoubleClicked(int32 GridIndex, const FPointerEvent& MouseEvent);
 
 	UFUNCTION()
 	void OnGridSlotClicked(int32 GridIndex, const FPointerEvent& MouseEvent);
@@ -178,10 +196,6 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UInv_GridSlot>> GridSlots;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Inventory")
-	EInv_ItemCategory ItemCategory;
-
-
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	TSubclassOf<UInv_GridSlot> GridSlotClass;
 
@@ -189,14 +203,12 @@ private:
 	TSubclassOf<UInv_SlottedItem> SlottedItemClass;
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
-	TSubclassOf<UInv_HoverItem> HoverItemClass;
-
-	UPROPERTY(EditAnywhere, Category = "Inventory")
 	TSubclassOf<UInvItemPopUp> ItemPopUpClass;
 
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> CanvasPanel;
+
 	UPROPERTY()
 	TObjectPtr<UInvItemPopUp> ItemPopUp;
 
@@ -204,14 +216,8 @@ private:
 	UPROPERTY()
 	TMap<int32, TObjectPtr<UInv_SlottedItem>> SlottedItems;
 
-	UPROPERTY(EditAnywhere,Category= "Inventory")
-	int32 Rows;
-
 	UPROPERTY(EditAnywhere, Category = "Inventory")
-	int32 Columns;
-
-	UPROPERTY(EditAnywhere, Category = "Inventory")
-	float TileSize;
+	FVector2D GridFramePadding;
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FVector2D ItemPopUpOffset;
@@ -224,6 +230,7 @@ private:
 	FInv_TileParameters LastTileParameters;
 	int32 ItemDropIndex{ INDEX_NONE };
 	FInv_SpaceQueryResult CurrentQueryResult;
+
 	bool bMouseWithinCanvas;
 	bool bLastMouseWithinCanvas;
 	int32 LastHighlightIndex;

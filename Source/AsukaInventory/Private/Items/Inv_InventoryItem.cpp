@@ -14,7 +14,6 @@ void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(ThisClass, DynamicItemFragments);
 	DOREPLIFETIME(ThisClass, StaticItemManifestAssetId);
 	DOREPLIFETIME(ThisClass, ItemIndex);
-	DOREPLIFETIME(ThisClass, OwningGridEntityTag);
 }
 
 void UInv_InventoryItem::SetDynamicItemFragments(const TArray<FInstancedStruct>& Fragments)
@@ -42,11 +41,6 @@ const FInv_ItemManifest& UInv_InventoryItem::GetItemManifest() const
 	return StaticItemManifest.Get<FInv_ItemManifest>(); 
 }
 
-void UInv_InventoryItem::SetOwningGridEntityTag(const FGameplayTag& NewTag)
-{
-	OwningGridEntityTag = FGameplayTag(NewTag);
-}
-
 void UInv_InventoryItem::AssimilateInventoryFragments(UInv_CompositeBase* Composite) const
 {
 	for(const auto FragmentTuple : FragmentsMap)
@@ -57,6 +51,21 @@ void UInv_InventoryItem::AssimilateInventoryFragments(UInv_CompositeBase* Compos
 			{
 				ItemFragment->Assimilate(Child);
 			});
+		}
+	}
+}
+
+void UInv_InventoryItem::InitManifestDynamicFragments(UObject* Outer)
+{
+	for(auto& Fragment : GetItemManifest().GetFragments())
+	{
+		if(const FInv_ItemFragment* FragmentBase = Fragment.GetPtr<FInv_ItemFragment>())
+		{
+			if(FragmentBase->IsDynamicFragment() && FragmentBase->ShouldReplicateFromStart())
+			{
+				auto DynamicFragment = GetFragmentStructByTagMutable<FInv_ItemFragment>(FragmentBase->GetFragmentTag());
+				DynamicFragment->Manifest(Outer);
+			}
 		}
 	}
 }

@@ -9,6 +9,7 @@
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "Items/Components/Inv_ItemComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Widgets/Inventory/Base/Inv_InventoryBase.h"
 
 AInv_PlayerControllerBase::AInv_PlayerControllerBase()
 {
@@ -37,6 +38,7 @@ void AInv_PlayerControllerBase::SetupInputComponent()
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
 	EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &AInv_PlayerControllerBase::ToggleInventory);
 	EnhancedInputComponent->BindAction(PrimaryInteractAction, ETriggerEvent::Started, this, &AInv_PlayerControllerBase::PrimaryInteract);
+	EnhancedInputComponent->BindAction(RotateHoverItemAction, ETriggerEvent::Started, this, &AInv_PlayerControllerBase::RotateHoverItem);
 }
 
 void AInv_PlayerControllerBase::Tick(float DeltaTime)
@@ -49,7 +51,7 @@ void AInv_PlayerControllerBase::ToggleInventory()
 {
 	if(InventoryComponent.IsValid())
 	{
-		InventoryComponent->ToggleInventoryMenu();
+		InventoryComponent->GetInventoryMenu()->ToggleInventoryMenu();
 	}
 	else
 	{
@@ -144,5 +146,17 @@ void AInv_PlayerControllerBase::TraceForItem()
 
 	if (LastActor.IsValid())
 	{
+	}
+}
+
+void AInv_PlayerControllerBase::RotateHoverItem()
+{
+	if (InventoryComponent.IsValid())
+	{
+		InventoryComponent->GetInventoryMenu()->RotateHoverItem();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Inventory Component is not valid!"));
 	}
 }

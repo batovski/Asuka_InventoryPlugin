@@ -39,6 +39,8 @@ private:
 	void CreateHUDWidget();
 	void TraceForItem();
 
+	void RotateHoverItem();
+
 	TWeakObjectPtr<UInv_InventoryComponent> InventoryComponent;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
@@ -49,6 +51,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
 	TObjectPtr<UInputAction> PrimaryInteractAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
+	TObjectPtr<UInputAction> RotateHoverItemAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
 	TSubclassOf<UInv_HUDWidget> HUDWidgetClass;

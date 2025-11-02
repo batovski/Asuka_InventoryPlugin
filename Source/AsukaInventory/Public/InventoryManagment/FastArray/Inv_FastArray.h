@@ -91,7 +91,7 @@ struct TStructOpsTypeTraits<FInv_InventoryFastArray> : TStructOpsTypeTraitsBase2
 	};
 };
 
-UINTERFACE(MinimalAPI)
+UINTERFACE(MinimalAPI, BlueprintType)
 class UInv_ItemListInterface : public UInterface
 {
 	GENERATED_BODY()
@@ -115,5 +115,7 @@ public:
 	void ChangeItemGridIndex(UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interface")
 	void MarkItemDirty(UInv_InventoryItem* Item);
+
+	virtual FInv_InventoryFastArray& GetInventoryListMutable() = 0;
 	virtual void AddRepSubObj(UObject* SubObj) = 0;
 };

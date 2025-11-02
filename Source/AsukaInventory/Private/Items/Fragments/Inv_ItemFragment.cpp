@@ -11,7 +11,11 @@
 #include "Widgets/Composite/Inv_Leaf_Text.h"
 #include "Engine/SkeletalMesh.h"
 #include "AbilitySystemGlobals.h"
+#include "InventoryManagment/Components/Inv_ExternalInventoryComponent.h"
+#include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
+#include "Items/Inv_ContainerHolderActor.h"
+#include "Widgets/Inventory/Spatial/Inv_SpatialInventory.h"
 
 
 void FInv_ImageFragment::Assimilate(UInv_CompositeBase* Composite) const
@@ -50,9 +54,9 @@ void FInv_LabeledNumberFragment::Assimilate(UInv_CompositeBase* Composite) const
 	LabeledLeaf->SetValueText(FText::AsNumber(Value, &Options), bCollapseValue);
 }
 
-void FInv_LabeledNumberFragment::Manifest()
+void FInv_LabeledNumberFragment::Manifest(UObject* Owner)
 {
-	FInv_InventoryItemFragmentAbstract::Manifest();
+	FInv_InventoryItemFragmentAbstract::Manifest(Owner);
 	if(bRandomizeOnManifest)
 	{
 		// Randomize the number
@@ -65,6 +69,14 @@ void FInv_HealthPotionFragment::OnConsume(APlayerController* PC)
 {
 	FInv_ConsumeModifier::OnConsume(PC);
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,FString::Printf(TEXT("health Potion consumed! Healing by: %f"), GetValue()));
+}
+
+void FInv_GridFragment::RotateGrid()
+{
+	GridSize = FIntPoint(GridSize.Y, GridSize.X);
+	Alignment = (Alignment == EInv_ItemAlignment::Horizontal) 
+		? EInv_ItemAlignment::Vertical 
+		: EInv_ItemAlignment::Horizontal;
 }
 
 void FInv_InventoryItemFragmentAbstract::Assimilate(UInv_CompositeBase* Composite) const
@@ -83,14 +95,14 @@ bool FInv_UIElementFragmentAbstract::MatchesWidgetTag(const UInv_CompositeBase* 
 	return Composite->GetFragmentTag().MatchesTag(UIElementTag);
 }
 
-void FInv_ConsumableFragment::Manifest()
+void FInv_ConsumableFragment::Manifest(UObject* Owner)
 {
-	FInv_InventoryItemFragmentAbstract::Manifest();
+	FInv_InventoryItemFragmentAbstract::Manifest(Owner);
 
 	for (auto& Modifier : ConsumeModifiers)
 	{
 		if (!Modifier.IsValid()) continue;
-		Modifier.GetMutable().Manifest();
+		Modifier.GetMutable().Manifest(Owner);
 	}
 }
 
@@ -145,13 +157,10 @@ void FInv_GameplayAbilitiesModifier::OnEquip(APlayerController* PC)
 			{
 				for (auto AbilityClass : Abilities)
 				{
-					if (AbilityClass.IsValid())
-					{
-						TSubclassOf<UGameplayAbility> LoadedAbility = AbilityClass.LoadSynchronous();
-						auto AbilitySpec = ASC->BuildAbilitySpecFromClass(LoadedAbility);
-						AbilitySpec.SourceObject = EquippedActor.Get();
-						GrantedAbilities.Emplace(ASC->GiveAbility(AbilitySpec));
-					}
+					TSubclassOf<UGameplayAbility> LoadedAbility = AbilityClass.LoadSynchronous();
+					auto AbilitySpec = ASC->BuildAbilitySpecFromClass(LoadedAbility);
+					AbilitySpec.SourceObject = EquippedActor.Get();
+					GrantedAbilities.Emplace(ASC->GiveAbility(AbilitySpec));
 				}
 			}
 		}
@@ -190,21 +199,17 @@ void FInv_GameplayEffectsModifier::OnEquip(APlayerController* PC)
 			{
 				for (auto EffectClass : Effects)
 				{
-					if (EffectClass.IsValid())
+					if (TSubclassOf<UGameplayEffect> LoadedEffect = EffectClass.LoadSynchronous())
 					{
-						if (TSubclassOf<UGameplayEffect> LoadedEffect = EffectClass.LoadSynchronous())
+						FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+						EffectContext.AddSourceObject(EquippedActor.Get());
+						FGameplayEffectSpecHandle EffectSpecHandle = ASC->MakeOutgoingSpec(LoadedEffect, 1.0f, EffectContext);
+						if (EffectSpecHandle.IsValid())
 						{
-							FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-							// Optionally, set the source object in the context
-							EffectContext.AddSourceObject(EquippedActor.Get());
-							FGameplayEffectSpecHandle EffectSpecHandle = ASC->MakeOutgoingSpec(LoadedEffect, 1.0f, EffectContext);
-							if (EffectSpecHandle.IsValid())
+							auto GrantedEffect = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
+							if (GrantedEffect.IsValid())
 							{
-								auto GrantedEffect = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
-								if (GrantedEffect.IsValid())
-								{
-									GrantedEffects.Emplace(GrantedEffect);
-								}
+								GrantedEffects.Emplace(GrantedEffect);
 							}
 						}
 					}
@@ -234,13 +239,13 @@ void FInv_GameplayEffectsModifier::OnUnEquip(APlayerController* PC)
 	}
 }
 
-void FInv_EquipmentFragment::Manifest()
+void FInv_EquipmentFragment::Manifest(UObject* Owner)
 {
-	FInv_InventoryItemFragmentAbstract::Manifest();
+	FInv_InventoryItemFragmentAbstract::Manifest(Owner);
 	for (auto& Modifier : EquipModifiers)
 	{
 		if (!Modifier.IsValid()) continue;
-		Modifier.GetMutable().Manifest();
+		Modifier.GetMutable().Manifest(Owner);
 	}
 }
 
@@ -307,6 +312,46 @@ USkeletalMesh* FInv_SkeletalMeshFragment::GetDesiredSkeletalMesh() const
 	}
 	
 	return LoadedMesh;
+}
+
+void FInv_ContainerFragment::Manifest(UObject* Owner)
+{
+	FInv_ItemFragment::Manifest(Owner);
+	if (!ContainerInventoryComponent)
+	{
+		if (const UActorComponent* OwnerComponent = Cast<UActorComponent>(Owner))
+		{
+			if (const AActor* OwnerActor = OwnerComponent->GetOwner())
+			{
+				if (!OwnerActor->HasAuthority())
+				{
+					return;
+				}
+				
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.Owner = const_cast<AActor*>(OwnerActor);
+				SpawnParams.Instigator = OwnerActor->GetInstigator();
+				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				
+				const auto SpawnedContainerActor = OwnerActor->GetWorld()->SpawnActor<AInv_ContainerHolderActor>(AInv_ContainerHolderActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+
+				ContainerInventoryComponent = NewObject<UInv_ExternalInventoryComponent>(
+					SpawnedContainerActor,
+					UInv_ExternalInventoryComponent::StaticClass(),
+					NAME_None,
+					RF_Transactional
+				);
+				
+				ContainerInventoryComponent->SetIsReplicated(true);
+				ContainerInventoryComponent->OnComponentCreated();
+				SpawnedContainerActor->AddInstanceComponent(ContainerInventoryComponent);
+				ContainerInventoryComponent->RegisterComponent();
+
+				ContainerInventoryComponent->Rows = ContainerDimension.Y;
+				ContainerInventoryComponent->Columns = ContainerDimension.X;
+			}
+		}
+	}
 }
 
 

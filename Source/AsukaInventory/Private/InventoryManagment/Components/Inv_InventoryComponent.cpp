@@ -14,7 +14,6 @@ UInv_InventoryComponent::UInv_InventoryComponent() : InventoryList(this)
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
 	bReplicateUsingRegisteredSubObjectList = true;
-	bIsInventoryMenuOpen = false;
 }
 
 void UInv_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -33,25 +32,26 @@ void UInv_InventoryComponent::BeginPlay()
 void UInv_InventoryComponent::TryAddItemByComponent(UInv_ItemComponent* ItemComponent)
 {
 	FInv_SlotAvailabilityResult Result = InventoryMenu->HasRoomForItem(ItemComponent);
-	UInv_InventoryItem* FoundItem = InventoryList.FindFirstItemByType(ItemComponent->GetItemManifest().GetItemType());
-	Result.Item = FoundItem;
 
-	if(Result.TotalRoomToFill == 0)
+	if(Result.TotalRoomToFill == 0 || Result.OwningInventoryComponent == nullptr)
 	{
 		NoRoomInInventory.Broadcast();
 		return;
 	}
 
+	UInv_InventoryItem* FoundItem = Execute_FindFirstItemByType(Result.OwningInventoryComponent.GetObject(), ItemComponent->GetItemManifest().GetItemType());
+	Result.Item = FoundItem;
+
 	if(Result.Item.IsValid() && Result.bStackable)
 	{
 		// OnStackChange.Broadcast(Result);
 		// Add stacks to an item that already exists in the inventory
-		Server_AddStacksToItemByComponent(ItemComponent, Result.TotalRoomToFill, Result.Remainder);
+		Server_AddStacksToItemByComponent(ItemComponent, Result.OwningInventoryComponent.GetObject(), Result.TotalRoomToFill, Result.Remainder);
 	}
 	else if(Result.TotalRoomToFill > 0)
 	{
 		// This item is new, add it to the inventory
-		Server_AddNewItemByComponent(ItemComponent, Result.bStackable ? Result.TotalRoomToFill : 0);
+		Server_AddNewItemByComponent(ItemComponent, Result.OwningInventoryComponent.GetObject(), Result.bStackable ? Result.TotalRoomToFill : 0);
 	}
 }
 
@@ -87,11 +87,11 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(const TScrip
 	}
 }
 
-void UInv_InventoryComponent::Server_AddStacksToItemByComponent_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount,
-                                                                    int32 Remainder)
+void UInv_InventoryComponent::Server_AddStacksToItemByComponent_Implementation(UInv_ItemComponent* ItemComponent, const TScriptInterface<IInv_ItemListInterface>& SourceInventory,
+	int32 StackCount, int32 Remainder)
 {
 	const FGameplayTag ItemType = IsValid(ItemComponent) ? ItemComponent->GetItemManifest().GetItemType() : FGameplayTag::EmptyTag;
-	UInv_InventoryItem* FoundItem = InventoryList.FindFirstItemByType(ItemType);
+	UInv_InventoryItem* FoundItem = Execute_FindFirstItemByType(SourceInventory.GetObject(), ItemType);
 	if (!FoundItem) return;
 
 	if(FInv_StackableFragment* StackFragment = FoundItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
@@ -110,9 +110,13 @@ void UInv_InventoryComponent::Server_AddStacksToItemByComponent_Implementation(U
 	}
 }
 
-void UInv_InventoryComponent::Server_AddNewItemByComponent_Implementation(UInv_ItemComponent* ItemComponent, int32 StackCount)
+void UInv_InventoryComponent::Server_AddNewItemByComponent_Implementation(UInv_ItemComponent* ItemComponent, const TScriptInterface<IInv_ItemListInterface>& SourceInventory, int32 StackCount)
 {
-	UInv_InventoryItem* NewItem = InventoryList.AddEntry(ItemComponent);
+	FInv_ItemAddingOptions NewItemAddingOptions;
+	NewItemAddingOptions.StackCount = StackCount;
+	NewItemAddingOptions.GridIndex = -1;
+
+	UInv_InventoryItem* NewItem = Execute_AddItemToList(SourceInventory.GetObject(), ItemComponent->GetStaticItemManifestID(), ItemComponent->GetDynamicFragmentsMutable(), NewItemAddingOptions);
 	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(StackCount);
@@ -125,7 +129,6 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInte
 {
 	if(!Item->IsStackable())
 	{
-		Item->SetOwningGridEntityTag(NewItemAddingOptions.GridEntityTag);
 		Item->SetItemIndex(NewItemAddingOptions.GridIndex);
 		Execute_MoveItemToList(TargetInventory.GetObject(), Item);
 		Execute_RemoveItemFromList(SourceInventory.GetObject(), Item);
@@ -242,7 +245,7 @@ UInv_InventoryItem* UInv_InventoryComponent::AddItemToList_Implementation(const 
 
 void UInv_InventoryComponent::ChangeItemGridIndex_Implementation(UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
-	InventoryList.ChangeEntryGridIndex(Item, NewItemAddingOptions.GridIndex, NewItemAddingOptions.GridEntityTag);
+	InventoryList.ChangeEntryGridIndex(Item, NewItemAddingOptions.GridIndex);
 }
 
 void UInv_InventoryComponent::MarkItemDirty_Implementation(UInv_InventoryItem* Item)
@@ -270,24 +273,16 @@ void UInv_InventoryComponent::Server_ConsumeItem_Implementation(UInv_InventoryIt
 	}
 }
 
-void UInv_InventoryComponent::Server_EquipSlotClicked_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* ItemToEquip,
-	UInv_InventoryItem* ItemToUnEquip, const FGameplayTag& EquipSlotTag)
+void UInv_InventoryComponent::Server_EquipItem_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface<IInv_ItemListInterface>& TargetInventory,
+	UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip)
 {
-	if(SourceInventory != this)
+	FInv_ItemAddingOptions ItemToEquipOptions;
+	Server_AddNewItem(SourceInventory, TargetInventory, ItemToEquip, ItemToEquipOptions);
+	if(IsValid(ItemToUnEquip))
 	{
-		FInv_ItemAddingOptions ItemToEquipOptions;
-		ItemToEquipOptions.GridEntityTag = EquipSlotTag;
-		Server_AddNewItem(SourceInventory, this, ItemToEquip, ItemToEquipOptions);
-		if(IsValid(ItemToUnEquip))
-		{
-			ItemToEquipOptions.GridIndex = ItemToEquip->GetItemIndex();
-			ItemToEquipOptions.GridEntityTag = ItemToUnEquip->GetOwningGridEntityTag();
-			Server_AddNewItem(this, SourceInventory, ItemToUnEquip, ItemToEquipOptions);
-		}
-	}
-	if(IsValid(ItemToEquip) && EquipSlotTag != FGameplayTag::EmptyTag)
-	{
-		ItemToEquip->SetOwningGridEntityTag(EquipSlotTag);
+		ItemToEquipOptions.GridIndex = ItemToEquip->GetItemIndex();
+		Server_RemoveItem(SourceInventory, ItemToUnEquip);
+		Server_AddNewItem(TargetInventory, SourceInventory, ItemToUnEquip, ItemToEquipOptions);
 	}
 	Multicast_EquipSlotClicked(ItemToEquip, ItemToUnEquip);
 }
@@ -295,10 +290,10 @@ void UInv_InventoryComponent::Server_EquipSlotClicked_Implementation(const TScri
 void UInv_InventoryComponent::Multicast_EquipSlotClicked_Implementation(UInv_InventoryItem* ItemToEquip,
 	UInv_InventoryItem* ItemToUnEquip)
 {
-	if(ItemToUnEquip)
+	/*if(ItemToUnEquip)
 		OnItemUnEquipped.Broadcast(ItemToUnEquip);
 	if (ItemToEquip)
-		OnItemEquipped.Broadcast(ItemToEquip);
+		OnItemEquipped.Broadcast(ItemToEquip);*/
 }
 
 void UInv_InventoryComponent::Server_MarkItemDirty_Implementation(
@@ -322,6 +317,14 @@ void UInv_InventoryComponent::Server_RemoveItem_Implementation(
 	Execute_RemoveItemFromList(SourceInventory.GetObject(), Item);
 }
 
+void UInv_InventoryComponent::Server_RotateItem_Implementation(UInv_InventoryItem* Item)
+{
+	if(const auto GridFragment = Item->GetFragmentStructByTagMutable<FInv_GridFragment>(FragmentTags::GridFragment))
+	{
+		GridFragment->RotateGrid();
+	}
+}
+
 void UInv_InventoryComponent::TryChangeItemGridIndex(const TScriptInterface<IInv_ItemListInterface>& SourceInventory,
                                                      UInv_InventoryItem* Item, const int32 NewGridIndex)
 {
@@ -333,18 +336,6 @@ void UInv_InventoryComponent::TryChangeItemGridIndex(const TScriptInterface<IInv
 const UInv_InventoryItem* UInv_InventoryComponent::FindInventoryItem(const FGameplayTag& ItemType) const
 {
 	return InventoryList.FindFirstItemByType(ItemType);
-}
-
-void UInv_InventoryComponent::ToggleInventoryMenu()
-{
-	if(bIsInventoryMenuOpen)
-	{
-		CloseInventoryMenu();
-	}
-	else
-	{
-		OpenInventoryMenu();
-	}
 }
 
 void UInv_InventoryComponent::AddRepSubObj(UObject* SubObj)
@@ -364,30 +355,6 @@ void UInv_InventoryComponent::ConstructInventory()
 
 	InventoryMenu = CreateWidget<UInv_InventoryBase>(OwningController.Get(), InventoryMenuClass);
 	InventoryMenu->AddToViewport();
-	CloseInventoryMenu();
-}
-
-void UInv_InventoryComponent::OpenInventoryMenu()
-{
-	if (!InventoryMenu) return;
-
-	InventoryMenu->SetVisibility(ESlateVisibility::Visible);
-	bIsInventoryMenuOpen = true;
-
-	if (!OwningController.IsValid()) return;
-	InventoryMenu->ShowInventoryCursor();
-	OnInventoryMenuToggled.Broadcast(bIsInventoryMenuOpen);
-}
-
-void UInv_InventoryComponent::CloseInventoryMenu()
-{
-	if (!InventoryMenu) return;
-	InventoryMenu->SetVisibility(ESlateVisibility::Collapsed);
-	bIsInventoryMenuOpen = false;
-
-	if (!OwningController.IsValid()) return;
-	InventoryMenu->HideInventoryCursor();
-	OnInventoryMenuToggled.Broadcast(bIsInventoryMenuOpen);
 }
 
 

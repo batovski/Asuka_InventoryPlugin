@@ -3,14 +3,14 @@
 
 #include "Items/Fragments/Inv_WeaponFragments.h"
 
-void FInv_WeaponFragment::Manifest()
+void FInv_WeaponFragment::Manifest(UObject* Owner)
 {
-	FInv_InventoryItemFragmentAbstract::Manifest();
-	Damage.Manifest();
-	MagazineSize.Manifest();
-	CurrentAmmo.Manifest();
-	AimDistance.Manifest();
-	AimViewAngle.Manifest();
+	FInv_InventoryItemFragmentAbstract::Manifest(Owner);
+	Damage.Manifest(Owner);
+	MagazineSize.Manifest(Owner);
+	CurrentAmmo.Manifest(Owner);
+	AimDistance.Manifest(Owner);
+	AimViewAngle.Manifest(Owner);
 }
 void FInv_WeaponFragment::Assimilate(UInv_CompositeBase* Composite) const
 {

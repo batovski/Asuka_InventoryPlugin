@@ -3,16 +3,3 @@
 
 #include "Items/Manifest/Inv_ItemManifest.h"
 
-#include "Items/Inv_InventoryItem.h"
-#include "Items/Components/Inv_ItemComponent.h"
-#include "Items/Fragments/Inv_ItemFragment.h"
-#include "Widgets/Composite/Inv_CompositeBase.h"
-
-
-void FInv_ItemManifest::Manifest()
-{
-	for(auto& Fragment : GetFragmentsMutable())
-	{
-		Fragment.GetMutable<FInv_ItemFragment>().Manifest();
-	}
-}

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Inv_GridTypes.generated.h"
+class IInv_ItemListInterface;
 class UInv_InventoryItem;
 /**
  * 
@@ -16,6 +17,13 @@ enum class EInv_ItemCategory : uint8
 	Craftable,
 	External,
 	None
+};
+
+UENUM(BlueprintType)
+enum class EInv_ItemAlignment : uint8
+{
+	Horizontal UMETA(DisplayName = "Horizontal"),
+	Vertical UMETA(DisplayName = "Vertical")
 };
 
 USTRUCT()
@@ -36,6 +44,7 @@ struct FInv_SlotAvailabilityResult
 	GENERATED_BODY()
 	FInv_SlotAvailabilityResult(){}
 	TWeakObjectPtr<UInv_InventoryItem> Item;
+	TScriptInterface<IInv_ItemListInterface> OwningInventoryComponent;
 	int32 TotalRoomToFill{ 0 };
 	int32 Remainder{ 0 };
 	bool bStackable{ false };
@@ -86,4 +95,5 @@ struct FInv_SpaceQueryResult
 	TWeakObjectPtr<UInv_InventoryItem> ValidItem = nullptr;
 
 	int32 UpperLeftIndex{ INDEX_NONE };
+	int32 GridIndex{ INDEXBUFFER_ALIGNMENT };
 };

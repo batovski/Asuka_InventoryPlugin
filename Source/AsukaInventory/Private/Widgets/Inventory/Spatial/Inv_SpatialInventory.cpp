@@ -5,11 +5,11 @@
 
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Blueprint/WidgetTree.h"
-#include "Components/Button.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
-#include "Components/WidgetSwitcher.h"
+#include "InventoryManagment/Components/Inv_ExternalInventoryComponent.h"
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
+#include "EquipmentManagement/Components/Inv_EquipmentComponent.h"
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 #include "Items/Inv_InventoryItem.h"
 #include "Player/Inv_PlayerControllerBase.h"
@@ -18,97 +18,110 @@
 #include "Widgets/Inventory/SlottedItems/Inv_EquippedSlottedItem.h"
 #include "Widgets/Inventory/Spatial/Inv_InventoryGrid.h"
 #include "Widgets/Inventory/Spatial/Inv_LootInventoryGrid.h"
+#include "Widgets/Inventory/Spatial/Inv_PopUpInventoryGrid.h"
 #include "Widgets/ItemDescription/Inv_ItemDescription.h"
 
 FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_ItemComponent* ItemComponent) const
 {
-	switch (UInv_InventoryStatics::GetItemCategoryFromItemComp(ItemComponent))
+	FInv_SlotAvailabilityResult Result;
+	if(ItemComponent->GetItemManifest().GetItemCategory() == EInv_ItemCategory::Equippable)
 	{
-		case EInv_ItemCategory::Equippable:
-			return Grid_Equippables->HasRoomForItem(ItemComponent);
-		case EInv_ItemCategory::Consumable:
-			return Grid_Consumables->HasRoomForItem(ItemComponent);
-		case EInv_ItemCategory::Craftable:
-			return Grid_Craftables->HasRoomForItem(ItemComponent);
-		default:
-			return FInv_SlotAvailabilityResult();
+		// if so check the equip slots for availability
+		if(const auto EquipmentSlot = FindSlotByEquippedType(ItemComponent->GetItemManifest().GetItemType()))
+		{
+			if(!EquipmentSlot->HasEquippedSlottedItem())
+			{
+				UInv_EquipmentComponent* EquipmentComponent = UInv_InventoryStatics::GetEquipmentComponent(GetOwningPlayer());
+				Result.OwningInventoryComponent = EquipmentComponent;
+				Result.TotalRoomToFill = 1;
+				return Result;
+			}
+		}
 	}
+	if (Result = Grid_Pockets->HasRoomForItem(ItemComponent); Result.TotalRoomToFill > 0)
+	{
+		return Result;
+	}
+	if( Result = Grid_Armor->HasRoomForItem(ItemComponent); Result.TotalRoomToFill > 0)
+	{
+		return Result;
+	}
+	if (Result = Grid_Backpack->HasRoomForItem(ItemComponent); Result.TotalRoomToFill > 0)
+	{
+		return Result;
+	}
+	return FInv_SlotAvailabilityResult();
 }
 
-FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_InventoryItem* Item, const int32 StackAmountOverride, const int32 GridIndex,
-	const EInv_ItemCategory GridCategory) const
+FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_InventoryItem* Item, UInv_InventoryGrid* TargetGrid,
+	const int32 StackAmountOverride, const int32 GridIndex) const
 {
 	FInv_StackableFragment* StackableFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment);
-	if (GridCategory == EInv_ItemCategory::None)
+	if (TargetGrid)
 	{
-		switch (Item->GetItemManifest().GetItemCategory())
-		{
-		case EInv_ItemCategory::Equippable:
-			return Grid_Equippables->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
-		case EInv_ItemCategory::Consumable:
-			return Grid_Consumables->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
-		case EInv_ItemCategory::Craftable:
-			return Grid_Craftables->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
-		default:
-			return FInv_SlotAvailabilityResult();
-		}
+		return TargetGrid->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
 	}
-	else
-	{
-		switch (GridCategory)
-		{
-		case EInv_ItemCategory::Equippable:
-			return Grid_Equippables->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
-		case EInv_ItemCategory::Consumable:
-			return Grid_Consumables->HasRoomForItem(Item->GetItemManifest(), StackableFragment , GridIndex);
-		case EInv_ItemCategory::Craftable:
-			return Grid_Craftables->HasRoomForItem(Item->GetItemManifest(), StackableFragment , GridIndex);
-		case EInv_ItemCategory::External:
-			return Grid_Loot->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
-		default:
-			return FInv_SlotAvailabilityResult();
-		}
-	}
+	return FInv_SlotAvailabilityResult();
 }
 
 void UInv_SpatialInventory::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
-	Button_Equippables->OnClicked.AddDynamic(this, &UInv_SpatialInventory::ShowEquippables);
-	Button_Consumables->OnClicked.AddDynamic(this, &UInv_SpatialInventory::ShowConsumables);
-	Button_Craftables->OnClicked.AddDynamic(this, &UInv_SpatialInventory::ShowCraftables);
 
-	Grid_Equippables->SetOwningCanvasPanel(CanvasPanel);
-	Grid_Equippables->OnHoverItemAssigned.BindDynamic(this, &ThisClass::HoverItemAssigned);
-	Grid_Equippables->OnHoverItemUnAssigned.BindDynamic(this, &ThisClass::HoverItemUnAssigned);
-	Grid_Equippables->OnItemEquipped.BindDynamic(this, &ThisClass::GridEquippedItemClicked);
-
+	Grid_Pockets->SetOwningCanvasPanel(CanvasPanel);
 	Grid_Loot->SetOwningCanvasPanel(CanvasPanel);
-	Grid_Loot->OnHoverItemAssigned.BindDynamic(this, &ThisClass::HoverItemAssigned);
-	Grid_Loot->OnHoverItemUnAssigned.BindDynamic(this, &ThisClass::HoverItemUnAssigned);
-	Grid_Loot->OnItemEquipped.BindDynamic(this, &ThisClass::GridEquippedItemClicked);
+	Grid_Backpack->SetOwningCanvasPanel(CanvasPanel);
+	Grid_Armor->SetOwningCanvasPanel(CanvasPanel);
 
-	Grid_Consumables->SetOwningCanvasPanel(CanvasPanel);
-	Grid_Craftables->SetOwningCanvasPanel(CanvasPanel);
-
-	ShowEquippables(); // Set default view
+	ShowPocketsGrid(); // Set default view
+	SetInActiveGrid(Grid_Backpack);
+	SetInActiveGrid(Grid_Armor);
 
 	WidgetTree->ForEachWidget([this](UWidget* Widget)
 		{
 			if(UInv_EquippedGridSlot* EquippedGridSlot = Cast<UInv_EquippedGridSlot>(Widget))
 			{
 				EquippedGridSlots.Add(EquippedGridSlot);
-				EquippedGridSlot->EquippedGridSlotClicked.AddDynamic(this, &UInv_SpatialInventory::EquippedGridSlotClicked);
+				EquippedGridSlot->EquippedGridSlotClicked.AddDynamic(this, &UInv_SpatialInventory::EmptyEquipmentGridSlotClicked);
 				EquippedGridSlot->SetSpatialInventory(this);
 			}
 		});
 	InventoryCursorWidget = CreateWidget<UUserWidget>(GetOwningPlayer(), InventoryCursorWidgetClass);
+
+	if (const auto EquipmentComponent = UInv_InventoryStatics::GetEquipmentComponent(GetOwningPlayer()))
+	{
+		if (!EquipmentComponent->GetInventoryListMutable().OnItemAdded.IsAlreadyBound(this, &ThisClass::ItemEquipped))
+		{
+			EquipmentComponent->GetInventoryListMutable().OnItemAdded.AddDynamic(this, &ThisClass::ItemEquipped);
+		}
+		if (!EquipmentComponent->GetInventoryListMutable().OnItemRemoved.IsAlreadyBound(this, &ThisClass::ItemUnEquipped))
+		{
+			EquipmentComponent->GetInventoryListMutable().OnItemRemoved.AddDynamic(this, &ThisClass::ItemUnEquipped);
+		}
+	}
+
+	CloseInventoryMenu();
 }
 
 FReply UInv_SpatialInventory::NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	if (GetHoverItem() && GetHoverItem()->GetOwningGrid())
-		GetHoverItem()->GetOwningGrid()->DropHoverItem();
+	// Get the widget that was actually clicked using hit testing
+	FWidgetPath WidgetPath = MouseEvent.GetEventPath() ? *MouseEvent.GetEventPath() : FWidgetPath();
+	// Check if the direct target is this widget (not a child)
+	// If a child widget (like background) was clicked, the path will contain it
+	if (WidgetPath.IsValid() && WidgetPath.Widgets.Num() > 0)
+	{
+		// If the last widget in the path isn't this widget, a child was clicked
+		if (WidgetPath.Widgets.Last().Widget != TakeWidget())
+		{
+			return FReply::Unhandled();
+		}
+	}
+	
+	// Only execute drop logic if we clicked on truly empty space
+	if (GetHoverItem())
+		DropHoverItem();
+		
 	return FReply::Handled();
 }
 
@@ -178,20 +191,63 @@ void UInv_SpatialInventory::SetHoverItem(UInv_HoverItem* NewHoverItem)
 	HoverItem = NewHoverItem;
 }
 
-float UInv_SpatialInventory::GetTileSize() const
+void UInv_SpatialInventory::RotateHoverItem()
 {
-	return Grid_Equippables->GetTileSize();
+	if (!IsValid(GetHoverItem())) return;
+	UInv_InventoryComponent* InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
+	check(InventoryComponent);
+	InventoryComponent->Server_RotateItem(GetHoverItem()->GetInventoryItem());
 }
 
-void UInv_SpatialInventory::InitLootGrid(UInv_ExternalInventoryComponent* ExternalInventoryComponent ,const TArray<UInv_InventoryItem*>& LootList) const
+void UInv_SpatialInventory::InitGrid(UInv_InventoryGrid* Grid, UInv_ExternalInventoryComponent* ExternalInventoryComponent ,const TArray<UInv_InventoryItem*>& LootList)
 {
-	if (!IsValid(Grid_Loot)) return;
-	for(auto Item : LootList)
+	if (!IsValid(Grid)) return;
+
+	Grid->CreateGrid(ExternalInventoryComponent, ExternalInventoryComponent->Rows, ExternalInventoryComponent->Columns, ExternalInventoryComponent->GridNameText);
+
+	for(const auto Item : LootList)
 	{
-		Grid_Loot->AddItem(Item);
+		Grid->AddItem(Item);
 	}
-	Grid_Loot->SetVisibility(ESlateVisibility::Visible);
-	Grid_Loot->SetExternalInventoryComponent(ExternalInventoryComponent);
+	Grid->SetVisibility(ESlateVisibility::Visible);
+	Grid->BindToOnInventoryToggled(this);
+}
+
+void UInv_SpatialInventory::AddDynamicGrid(const FGameplayTag& GridTag,
+	UInv_ExternalInventoryComponent* ExternalInventoryComponent, const TArray<UInv_InventoryItem*>& LootList)
+{
+	if (!Grid_Backpack || !Grid_Armor || !Grid_Loot) return;
+
+	if(GridTag.MatchesTag(Grid_Backpack.Get()->GetOwningGridTag()))
+	{
+		InitGrid(Grid_Backpack, ExternalInventoryComponent, LootList);
+	}
+	else if(GridTag.MatchesTag(Grid_Armor.Get()->GetOwningGridTag()))
+	{
+		InitGrid(Grid_Armor, ExternalInventoryComponent, LootList);
+	}
+	else if(GridTag.MatchesTag(Grid_Loot.Get()->GetOwningGridTag()))
+	{
+		InitGrid(Grid_Loot, ExternalInventoryComponent, LootList);
+	}
+}
+
+void UInv_SpatialInventory::RemoveDynamicGrid(const FGameplayTag& GridTag)
+{
+	if (!Grid_Backpack || !Grid_Armor || !Grid_Loot) return;
+
+	if (GridTag.MatchesTag(Grid_Backpack.Get()->GetOwningGridTag()))
+	{
+		SetInActiveGrid(Grid_Backpack);
+	}
+	else if (GridTag.MatchesTag(Grid_Armor.Get()->GetOwningGridTag()))
+	{
+		SetInActiveGrid(Grid_Armor);
+	}
+	else if (GridTag.MatchesTag(Grid_Loot.Get()->GetOwningGridTag()))
+	{
+		SetInActiveGrid(Grid_Loot);
+	}
 }
 
 void UInv_SpatialInventory::ShowInventoryCursor()
@@ -214,40 +270,33 @@ void UInv_SpatialInventory::HideInventoryCursor()
 	PlayerController->ChangeCursorWidget(nullptr);
 }
 
-void UInv_SpatialInventory::ShowEquippables()
+void UInv_SpatialInventory::ShowPocketsGrid()
 {
-	SetActiveGrid(Grid_Equippables, Button_Equippables);
+	SetActiveGrid(Grid_Pockets);
 }
 
-void UInv_SpatialInventory::ShowConsumables()
+void UInv_SpatialInventory::ShowBackpackGrid()
 {
-	SetActiveGrid(Grid_Consumables, Button_Consumables);
+	SetActiveGrid(Grid_Backpack);
 }
 
-void UInv_SpatialInventory::ShowCraftables()
+void UInv_SpatialInventory::ShowArmorGrid()
 {
-	SetActiveGrid(Grid_Craftables, Button_Craftables);
+	SetActiveGrid(Grid_Armor);
 }
 
-void UInv_SpatialInventory::EquippedGridSlotClicked(UInv_EquippedGridSlot* GridSlot,
+void UInv_SpatialInventory::EmptyEquipmentGridSlotClicked(UInv_EquippedGridSlot* GridSlot,
                                                     const FGameplayTag& EquipmentTypeTag)
 {
 	if (!CanEquipHoverItem(GridSlot, EquipmentTypeTag)) return;
 
 	UInv_InventoryComponent* InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
 	check(InventoryComponent);
-	HoverItem->GetInventoryItem()->SetOwningGridEntityTag(GridSlot->GetOwningEntityGridTag());
-	InventoryComponent->Server_EquipSlotClicked(HoverItem->GetOwningGrid()->GetGridInventoryInterface(), HoverItem->GetInventoryItem(), nullptr, GridSlot->GetOwningEntityGridTag());
-	if(HoverItem->GetOwningGrid()->GetGridInventoryInterface() == InventoryComponent)
-	{
-		HoverItem->GetOwningGrid()->RemoveItem(HoverItem->GetInventoryItem());
-	}
+	UInv_EquipmentComponent* EquipmentComponent = UInv_InventoryStatics::GetEquipmentComponent(GetOwningPlayer());
+	check(EquipmentComponent);
 
-	if(GetOwningPlayer()->GetNetMode() == NM_Standalone)
-	{
-		InventoryComponent->OnItemEquipped.Broadcast(HoverItem->GetInventoryItem());
-	}
-	Grid_Equippables->ClearHoverItem();
+	InventoryComponent->Server_EquipItem(HoverItem->GetOwningInventory(), EquipmentComponent, HoverItem->GetInventoryItem(), nullptr);
+	ClearHoverItem();
 }
 
 void UInv_SpatialInventory::EquippedSlottedItemClicked(UInv_EquippedSlottedItem* SlottedItem, const FPointerEvent& MouseEvent)
@@ -266,33 +315,20 @@ void UInv_SpatialInventory::EquippedSlottedItemClicked(UInv_EquippedSlottedItem*
 			UInv_EquippedGridSlot* EquippedGridSlot = FindSlotWithEquippedItem(ItemToUnEquip);
 			EquippedGridSlot->RemoveEquippedSlottedItem();
 
-			TScriptInterface<IInv_ItemListInterface> SourceInventory;
-			if (GetHoverItem())
-			{
-				SourceInventory = GetHoverItem()->GetOwningGrid()->GetGridInventoryInterface();
-			}
-			else
-			{
-				Grid_Equippables->AssignHoverItem(ItemToUnEquip);
-				SourceInventory = Grid_Equippables->GetGridInventoryInterface();
-			}
+			TScriptInterface<IInv_ItemListInterface> SourceInventory = GetHoverItem()->GetOwningInventory();
 
 			UInv_InventoryComponent* InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
 			check(InventoryComponent);
-			GetHoverItem()->GetInventoryItem()->SetOwningGridEntityTag(EquippedGridSlot->GetOwningEntityGridTag());
-			InventoryComponent->Server_EquipSlotClicked(SourceInventory, ItemToEquip, ItemToUnEquip, EquippedGridSlot->GetOwningEntityGridTag());
-
-			if (GetOwningPlayer()->GetNetMode() == NM_Standalone)
-			{
-				InventoryComponent->OnItemUnEquipped.Broadcast(ItemToUnEquip);
-				InventoryComponent->OnItemEquipped.Broadcast(ItemToEquip);
-			}
-			GetHoverItem()->GetOwningGrid()->ClearHoverItem();
+			UInv_EquipmentComponent* EquipmentComponent = UInv_InventoryStatics::GetEquipmentComponent(GetOwningPlayer());
+			check(EquipmentComponent);
+			InventoryComponent->Server_EquipItem(SourceInventory, EquipmentComponent, ItemToEquip, ItemToUnEquip);
+			ClearHoverItem();
 		}
 		else
 		{
-			Grid_Equippables->AssignHoverItem(ItemToUnEquip);
-			Grid_Equippables->GetHoverItem()->OnHoverItemPutDown.AddDynamic(this, &ThisClass::EquipmentPutDownInGrid);
+			UInv_EquipmentComponent* EquipmentComponent = UInv_InventoryStatics::GetEquipmentComponent(GetOwningPlayer());
+			check(EquipmentComponent);
+			AssignHoverItem(EquipmentComponent,ItemToUnEquip);
 		}
 	}
 	else
@@ -300,60 +336,177 @@ void UInv_SpatialInventory::EquippedSlottedItemClicked(UInv_EquippedSlottedItem*
 		//TODO: Implement right click functionality (Pop up menu, etc.)
 	}
 }
-void UInv_SpatialInventory::EquipmentPutDownInGrid(UInv_InventoryItem* Item)
-{
-	UInv_InventoryComponent* InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
-	check(InventoryComponent);
 
-	InventoryComponent->Server_EquipSlotClicked(InventoryComponent, nullptr, Item);
-	GetHoverItem()->OnHoverItemPutDown.RemoveDynamic(this, &ThisClass::EquipmentPutDownInGrid);
-	UInv_EquippedGridSlot* EquippedGridSlot = FindSlotWithEquippedItem(Item);
-	EquippedGridSlot->RemoveEquippedSlottedItem();
+void UInv_SpatialInventory::AssignHoverItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* InventoryItem)
+{
+	if (IsItemPopUpGridOpen(InventoryItem)) return;
+
+	if (!IsValid(GetHoverItem()))
+	{
+		SetHoverItem(CreateWidget<UInv_HoverItem>(GetOwningPlayer(), HoverItemClass));
+	}
+	const FInv_GridFragment* GridFragment = InventoryItem->GetFragmentStructByTag<FInv_GridFragment>(FragmentTags::GridFragment);
+	const FInv_ImageFragment* ImageFragment = InventoryItem->GetFragmentStructByTag<FInv_ImageFragment>(FragmentTags::IconFragment);
+	if (!GridFragment || !ImageFragment) return;
+
+	const FVector2D DrawSize = UInv_InventoryGrid::GetDrawSize(UInv_InventoryGrid::GetTileSize(), GridFragment);
+
+	FSlateBrush IconBrush;
+	IconBrush.SetResourceObject(ImageFragment->GetIcon());
+	IconBrush.DrawAs = ESlateBrushDrawType::Image;
+	IconBrush.ImageSize = DrawSize * UWidgetLayoutLibrary::GetViewportScale(this);
+
+	GetHoverItem()->SetImageBrush(IconBrush, GridFragment->GetAlignment());
+	GetHoverItem()->SetGridDimensions(GridFragment->GetGridSize());
+	GetHoverItem()->SetInventoryItem(InventoryItem);
+	GetHoverItem()->SetIsStackable(InventoryItem->IsStackable());
+	GetHoverItem()->SetOwningInventory(SourceInventory);
+
+	GetOwningPlayer()->SetMouseCursorWidget(EMouseCursor::Default, GetHoverItem());
+
+	OnHoverItemAssigned.Broadcast(InventoryItem);
 }
 
-void UInv_SpatialInventory::GridEquippedItemClicked(UInv_InventoryItem* Item, const int32 GridIndex, UInv_InventoryGrid* OwningGrid)
+void UInv_SpatialInventory::ClearHoverItem()
 {
-	if (!IsValid(Item)) return;
+	if (!IsValid(GetHoverItem())) return;
+	OnHoverItemUnAssigned.Broadcast(GetHoverItem()->GetInventoryItem());
+	GetHoverItem()->SetInventoryItem(nullptr);
+	GetHoverItem()->SetIsStackable(false);
+	GetHoverItem()->SetPreviousGridIndex(INDEX_NONE);
+	GetHoverItem()->UpdateStackCount(0);
+	GetHoverItem()->SetImageBrush(FSlateNoResource(), EInv_ItemAlignment::Horizontal);
+	GetHoverItem()->SetOwningInventory(nullptr);
+
+	GetHoverItem()->RemoveFromParent();
+	SetHoverItem(nullptr);
+	ShowInventoryCursor();
+}
+
+void UInv_SpatialInventory::DropHoverItem()
+{
+	if (!IsValid(GetHoverItem())) return;
+	if (!IsValid(GetHoverItem()->GetInventoryItem())) return;
+	const auto AuthorityInventory = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
+	AuthorityInventory->Server_DropItemFromExternalInventory(GetHoverItem()->GetOwningInventory(), GetHoverItem()->GetInventoryItem(), GetHoverItem()->GetStackCount());
+	ClearHoverItem();
+}
+
+void UInv_SpatialInventory::CloseInventoryMenu()
+{
+	SetVisibility(ESlateVisibility::Collapsed);
+	bIsInventoryMenuOpen = false;
+
+	HideInventoryCursor();
+	OnInventoryMenuToggled.Broadcast(bIsInventoryMenuOpen);
+	ClearHoverItem();
+}
+
+void UInv_SpatialInventory::OpenInventoryMenu()
+{
+	SetVisibility(ESlateVisibility::Visible);
+	bIsInventoryMenuOpen = true;
+
+	ShowInventoryCursor();
+	OnInventoryMenuToggled.Broadcast(bIsInventoryMenuOpen);
+}
+
+void UInv_SpatialInventory::ToggleInventoryMenu()
+{
+	if (bIsInventoryMenuOpen)
+	{
+		CloseInventoryMenu();
+	}
+	else
+	{
+		OpenInventoryMenu();
+	}
+}
+
+bool UInv_SpatialInventory::IsItemPopUpGridOpen(UInv_InventoryItem* OwningItem) const
+{
+	return ActiveItemPopUpGrids.Contains(OwningItem);
+}
+
+void UInv_SpatialInventory::CreateItemPopUpGrid(UInv_InventoryItem* OwningItem)
+{
+	if (!IsValid(OwningItem)) return;
+
+	if (IsItemPopUpGridOpen(OwningItem)) return;
+
+	if (FInv_ContainerFragment* ItemContainer = OwningItem->GetFragmentStructByTagMutable<FInv_ContainerFragment>(FragmentTags::ContainerFragment))
+	{
+		UInv_PopUpInventoryGrid* PopUpGrid = CreateWidget<UInv_PopUpInventoryGrid>(this, ItemPopupGridClass);
+
+		CanvasPanel->AddChild(PopUpGrid);
+		if (FInv_TextFragment* ItemNameFragment = OwningItem->GetFragmentStructByTagMutable<FInv_TextFragment>(ItemDescription::ItemNameFragment))
+			ItemContainer->ContainerInventoryComponent->GridNameText = ItemNameFragment->GetText();
+
+		InitGrid(PopUpGrid, ItemContainer->ContainerInventoryComponent, ItemContainer->ContainerInventoryComponent->GetInventoryItems());
+		PopUpGrid->SetOwningItem(OwningItem);
+		PopUpGrid->OnPopUpClosed.BindDynamic(this, &ThisClass::CloseItemPopUpGrid);
+		ActiveItemPopUpGrids.Add(OwningItem, PopUpGrid);
+
+		PopUpGrid->ForceLayoutPrepass();
+		const FVector2D PopUpGridSize = PopUpGrid->GetDesiredSize();
+		UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(PopUpGrid);
+		const FVector2D MousePos = UWidgetLayoutLibrary::GetMousePositionOnViewport(GetOwningPlayer());
+		CanvasSlot->SetPosition(MousePos);
+		CanvasSlot->SetSize(PopUpGridSize);
+	}
+}
+
+void UInv_SpatialInventory::CloseItemPopUpGrid(UInv_InventoryItem* OwningItem)
+{
+	UInv_PopUpInventoryGrid* PopUpGrid = ActiveItemPopUpGrids.FindAndRemoveChecked(OwningItem);
+	if (!IsValid(PopUpGrid)) return;
+	PopUpGrid->OnPopUpClosed.Unbind();
+	PopUpGrid->RemoveFromParent();
+}
+
+void UInv_SpatialInventory::TryToEquipItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item)
+{
+	if (!IsValid(Item) || !SourceInventory) return;
 	UInv_EquippedGridSlot* EquippedGridSlot = FindSlotByEquippedType(Item->GetItemManifest().GetItemType());
 	if (!IsValid(EquippedGridSlot)) return;
-
-	OwningGrid->PickUp(Item, GridIndex);
-	EquippedGridSlotClicked(EquippedGridSlot, EquippedGridSlot->GetEquipmentTypeTag());
+	AssignHoverItem(SourceInventory, Item);
+	EmptyEquipmentGridSlotClicked(EquippedGridSlot, EquippedGridSlot->GetEquipmentTypeTag());
 }
 
-void UInv_SpatialInventory::HoverItemAssigned(const UInv_InventoryItem* SlottedItem)
+void UInv_SpatialInventory::ItemEquipped(UInv_InventoryItem* Item)
 {
-	if (!IsValid(SlottedItem)) return;
-	UInv_EquippedGridSlot* DesiredEquippedSlot = FindSlotByEquippedType(SlottedItem->GetItemManifest().GetItemType());
-	if (!IsValid(DesiredEquippedSlot)) return;
-	DesiredEquippedSlot->HighlightSlot();
-}
-
-void UInv_SpatialInventory::HoverItemUnAssigned(const UInv_InventoryItem* SlottedItem)
-{
-	if (!IsValid(SlottedItem)) return;
-	UInv_EquippedGridSlot* DesiredEquippedSlot = FindSlotByEquippedType(SlottedItem->GetItemManifest().GetItemType());
-	if (!IsValid(DesiredEquippedSlot)) return;
-	DesiredEquippedSlot->UnHighlightSlot();
-}
-
-void UInv_SpatialInventory::DisableButton(UButton* Button) const
-{
-	Button_Equippables->SetIsEnabled(true);
-	Button_Consumables->SetIsEnabled(true);
-	Button_Craftables->SetIsEnabled(true);
-	Button->SetIsEnabled(false);
-}
-
-void UInv_SpatialInventory::SetActiveGrid(UInv_InventoryGrid* GridToActivate, UButton* Button)
-{
-	if (ActiveGrid.IsValid())
+	if (!IsValid(Item)) return;
+	if(const FInv_ContainerFragment* ContainerFragment = Item->GetFragmentStructByTagMutable<FInv_ContainerFragment>(FragmentTags::EquipmentFragment))
 	{
-		ActiveGrid->OnHide();
+		if (UInv_ExternalInventoryComponent* OwningInventoryComponent = ContainerFragment->ContainerInventoryComponent)
+		{
+			AddDynamicGrid(ContainerFragment->GridEntityTag, OwningInventoryComponent, OwningInventoryComponent->GetInventoryItems());
+		}
 	}
-	ActiveGrid = GridToActivate;
-	DisableButton(Button);
-	WidgetSwitcher->SetActiveWidget(GridToActivate);
+}
+
+void UInv_SpatialInventory::ItemUnEquipped(UInv_InventoryItem* Item)
+{
+	if (!IsValid(Item)) return;
+	if (const FInv_ContainerFragment* ContainerFragment = Item->GetFragmentStructByTagMutable<FInv_ContainerFragment>(FragmentTags::EquipmentFragment))
+	{
+		if (UInv_ExternalInventoryComponent* OwningInventoryComponent = ContainerFragment->ContainerInventoryComponent)
+		{
+			RemoveDynamicGrid(ContainerFragment->GridEntityTag);
+		}
+	}
+}
+
+void UInv_SpatialInventory::SetActiveGrid(UInv_InventoryGrid* GridToActivate)
+{
+	if (!IsValid(GridToActivate)) return;
+	GridToActivate->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UInv_SpatialInventory::SetInActiveGrid(UInv_InventoryGrid* GridToDeactivate)
+{
+	if (!IsValid(GridToDeactivate)) return;
+	GridToDeactivate->OnHide();
 }
 
 UInv_ItemDescription* UInv_SpatialInventory::GetItemDescription()

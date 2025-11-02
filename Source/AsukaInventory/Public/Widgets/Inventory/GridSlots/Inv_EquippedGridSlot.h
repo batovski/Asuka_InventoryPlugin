@@ -8,6 +8,7 @@
 #include "Inv_EquippedGridSlot.generated.h"
 
 
+class UInv_EquipmentComponent;
 class UInv_SpatialInventory;
 class UInv_InventoryComponent;
 class FEquippedSlottedItemClicked;
@@ -30,12 +31,16 @@ public:
 	void RemoveEquippedSlottedItem();
 
 	void SetEquippedSlottedItem(UInv_EquippedSlottedItem* SlottedItem) { EquippedSlottedItemInstance = SlottedItem; }
+	bool HasEquippedSlottedItem() const;
 	const FGameplayTag& GetEquipmentTypeTag() const { return EquipmentTypeTag; }
-	const FGameplayTag& GetOwningEntityGridTag() const { return OwningEntityGridTag; }
 	
-
+	UFUNCTION()
+	void UnHighlightSlot(const UInv_InventoryItem* HoverItem);
 	void UnHighlightSlot();
-	void HighlightSlot();
+	UFUNCTION()
+	void HighlightSlot(const UInv_InventoryItem* HoverItem);
+
+	void SetOccupiedSlot();
 
 	FEquippedGridSlotClicked EquippedGridSlotClicked;
 	UFUNCTION()
@@ -53,16 +58,13 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Inventory",meta = (Categories="GameItems.Equipments"))
 	FGameplayTag EquipmentTypeTag;
 
-	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (Categories = "InventoryGrid.Player.Equipment"))
-	FGameplayTag OwningEntityGridTag;
-
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	TSubclassOf<UInv_EquippedSlottedItem> EquippedSlottedItemClass;
 
 	UPROPERTY()
 	TObjectPtr< UInv_EquippedSlottedItem> EquippedSlottedItemInstance;
 
-	TWeakObjectPtr<UInv_InventoryComponent> InventoryComponent;
+	TWeakObjectPtr<UInv_EquipmentComponent> EquipmentComponent;
 	TWeakObjectPtr<UInv_SpatialInventory> SpatialInventory;
 
 };

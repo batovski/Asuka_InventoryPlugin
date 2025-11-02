@@ -37,7 +37,7 @@ public:
 	FPopUpMenuSplit OnSplit;
 	FPopUpMenuDrop OnDrop;
 	FPopUpMenuConsume OnConsume;
-	FPopUpMenuEquip OneEquip;
+	FPopUpMenuEquip OnEquip;
 
 private:
 

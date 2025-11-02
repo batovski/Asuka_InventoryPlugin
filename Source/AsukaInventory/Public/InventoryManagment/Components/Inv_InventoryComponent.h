@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "InventoryManagment/FastArray/Inv_FastArray.h"
-#include <Types/Inv_GridTypes.h>
 #include "Inv_InventoryComponent.generated.h"
 
 
@@ -15,8 +14,6 @@ struct FInv_SlotAvailabilityResult;
 class UInv_ItemComponent;
 class UInv_InventoryBase;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FItemEquipStatusChanges, UInv_InventoryItem*, Item);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInventoryMenuToggled, bool, bIsOpen);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNoRoomInInventory);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Blueprintable )
@@ -37,10 +34,10 @@ public:
 	void Server_AddNewItemByItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions);
 
 	UFUNCTION(Server,Reliable)
-	void Server_AddNewItemByComponent(UInv_ItemComponent* ItemComponent, int32 StackCount);
+	void Server_AddNewItemByComponent(UInv_ItemComponent* ItemComponent, const TScriptInterface<IInv_ItemListInterface>& SourceInventory, int32 StackCount);
 
 	UFUNCTION(Server, Reliable)
-	void Server_AddStacksToItemByComponent(UInv_ItemComponent* ItemComponent, int32 StackCount, int32 Remainder);
+	void Server_AddStacksToItemByComponent(UInv_ItemComponent* ItemComponent, const TScriptInterface<IInv_ItemListInterface>& SourceInventory, int32 StackCount, int32 Remainder);
 
 	UFUNCTION(Server, Reliable)
 	void Server_DropItem(UInv_InventoryItem* Item, int32 StackCount);
@@ -56,6 +53,8 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_ConsumeItem(UInv_InventoryItem* Item);
+	UFUNCTION(Server, Reliable)
+	void Server_RotateItem(UInv_InventoryItem* Item);
 
 	UFUNCTION(Server, Reliable)
 	void Server_UpdateItemStackCount(UInv_InventoryItem* Item, const int32 StackCount);
@@ -64,7 +63,8 @@ public:
 
 
 	UFUNCTION(Server, Reliable)
-	void Server_EquipSlotClicked(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip, const FGameplayTag& EquipSlotTag = {});
+	void Server_EquipItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface<IInv_ItemListInterface>& TargetInventory,
+		UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_EquipSlotClicked(UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
 
@@ -73,13 +73,10 @@ public:
 
 	const UInv_InventoryItem* FindInventoryItem(const FGameplayTag& ItemType) const;
 
-	void ToggleInventoryMenu();
-	void OpenInventoryMenu();
-
 	void SpawnDroppedItem(UInv_InventoryItem* Item, int32 StackCount);
 
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	UInv_InventoryBase* GetInventoryMenu() const { return InventoryMenu; }
-	FInv_InventoryFastArray& GetInventoryListMutable() { return InventoryList; }
 	const FInv_InventoryFastArray& GetInventoryList() const { return InventoryList; }
 
 
@@ -91,12 +88,10 @@ public:
 	virtual void ChangeItemGridIndex_Implementation(UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions) override;
 	virtual void MarkItemDirty_Implementation(UInv_InventoryItem* Item) override;
 	virtual void AddRepSubObj(UObject* SubObj) override;
+	virtual FInv_InventoryFastArray& GetInventoryListMutable() override { return InventoryList; }
+	// End of IInv_ItemListInterface interface
 
 	FNoRoomInInventory NoRoomInInventory;
-	FItemEquipStatusChanges OnItemEquipped;
-	FItemEquipStatusChanges OnItemUnEquipped;
-	UPROPERTY(BlueprintAssignable, Category = "Inventory")
-	FInventoryMenuToggled OnInventoryMenuToggled;
 
 protected:
 	// Called when the game starts
@@ -107,8 +102,8 @@ private:
 	UFUNCTION(Server, Reliable)
 	void Server_AddStacksToItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount, int32 Remainder);
 
+
 	void ConstructInventory();
-	void CloseInventoryMenu();
 
 	UPROPERTY(Replicated)
 	FInv_InventoryFastArray InventoryList;
@@ -132,6 +127,4 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	float RelativeSpawnElevation{ -70.0f };
-
-	bool bIsInventoryMenuOpen = false;
 };

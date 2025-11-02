@@ -22,7 +22,7 @@ struct FInv_WeaponFragment : public FInv_InventoryItemFragmentAbstract
 		bDynamicFragment = true;
 		FragmentTag = FragmentTags::WeaponFragment;
 	}
-	virtual void Manifest() override;
+	virtual void Manifest(UObject* Owner) override;
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")

@@ -19,6 +19,7 @@ class ASUKAINVENTORY_API UInv_SlottedItem : public UUserWidget
 
 public:
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
+	virtual FReply NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual void NativeOnMouseLeave(const FPointerEvent& MouseEvent) override;
 
@@ -39,6 +40,7 @@ public:
 	void UpdateStackCount(int32 StackCount) const;
 
 	FSlottedItemClicked OnSlottedItemClicked;
+	FSlottedItemClicked OnSlottedItemDoubleClicked;
 private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> Image_Icon;
@@ -46,8 +48,14 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Text_StackCount;
 
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	float DoubleClickTreshold{ 0.2f };
+
 	int32 GridIndex;
 	FIntPoint GridDimensions;
 	TWeakObjectPtr<UInv_InventoryItem> InventoryItem;
 	bool bIsStackable{ false };
+
+	float LastClickTime {0.f};
+	FTimerHandle DoubleClickTimerHandle;
 };

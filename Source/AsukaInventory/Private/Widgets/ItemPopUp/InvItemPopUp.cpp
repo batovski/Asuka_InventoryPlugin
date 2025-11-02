@@ -35,7 +35,7 @@ void UInvItemPopUp::SplitButtonClicked()
 
 void UInvItemPopUp::EquipButtonClicked()
 {
-	if(OneEquip.ExecuteIfBound(GridIndex))
+	if(OnEquip.ExecuteIfBound(GridIndex))
 	{
 		RemoveFromParent();
 	}

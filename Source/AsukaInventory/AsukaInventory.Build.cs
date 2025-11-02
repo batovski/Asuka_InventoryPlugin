@@ -32,7 +32,8 @@ public class AsukaInventory : ModuleRules
 				"EnhancedInput",
 				"GameplayTags",
 				"GameplayAbilities",
-				"MetasoundEngine"
+				"MetasoundEngine",
+				"DeveloperSettings"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -49,7 +50,8 @@ public class AsukaInventory : ModuleRules
                 "UMG",
                 "EnhancedInput",
 				"InputCore",
-				"GameplayAbilities"
+				"GameplayAbilities",
+				"DeveloperSettings"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

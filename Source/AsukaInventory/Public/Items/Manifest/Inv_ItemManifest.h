@@ -24,7 +24,7 @@ struct ASUKAINVENTORY_API FInv_ItemManifest
 	friend class UInv_ItemComponent;
 
 	GENERATED_BODY()
-	void Manifest();
+	void Manifest(UObject* Owner);
 	EInv_ItemCategory GetItemCategory() const { return ItemCategory; }
 	FGameplayTag GetItemType() const { return ItemType; }
 

@@ -12,7 +12,6 @@ namespace FragmentTags
 	}
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GridFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(IconFragment)
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(ItemNameFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(StackableFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(ConsumableFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(EquipmentFragment)
@@ -23,9 +22,11 @@ namespace FragmentTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(AnimLayerFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayAbilitiesFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayEffectsFragment)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(ContainerFragment)
 }
 namespace ItemDescription
 {
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(ItemNameFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(PrimaryStatFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(ItemTypeFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(DescriptionTextFragment)

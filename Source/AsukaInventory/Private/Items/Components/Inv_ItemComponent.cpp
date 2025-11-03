@@ -15,6 +15,7 @@ UInv_ItemComponent::UInv_ItemComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 	PickupMessage = FString("E - Pick Up");
 	SetIsReplicatedByDefault(true);
+	DynamicFragments.Owner = this;
 }
 
 void UInv_ItemComponent::BeginPlay()
@@ -47,8 +48,24 @@ void UInv_ItemComponent::InitItemManifest(const FPrimaryAssetId& NewItemManifest
 
 void UInv_ItemComponent::InitDynamicData(const TArray<FInstancedStruct>& NewDynamicFragments)
 {
-	DynamicFragments = NewDynamicFragments;
+	DynamicFragments.Items.Empty();
+	DynamicFragments.Owner = this;
+	for (const FInstancedStruct& Fragment : NewDynamicFragments)
+	{
+		DynamicFragments.Items.Add(FInv_ItemFragmentArrayItem(Fragment));
+	}
+	DynamicFragments.MarkArrayDirty();
 	ApplyDynamicFragmentsToManifest();
+}
+
+TArray<FInstancedStruct> UInv_ItemComponent::GetDynamicFragments() const
+{
+	TArray<FInstancedStruct> Result;
+	for (const FInv_ItemFragmentArrayItem& Item : DynamicFragments.Items)
+	{
+		Result.Add(Item.Fragment);
+	}
+	return Result;
 }
 UInv_ItemComponent* UInv_ItemComponent::SpawnPickUpActor(const TSubclassOf<AActor>& ActorToSpawn, const UObject* WorldContextObject, const FVector& SpawnLocation,
 	const FRotator& SpawnRotation)
@@ -75,12 +92,13 @@ const FPrimaryAssetId& UInv_ItemComponent::GetStaticItemManifestID() const
 {
 	return StaticItemManifestID;
 }
-void UInv_ItemComponent::OnRep_DynamicFragments()
+
+void UInv_ItemComponent::OnDynamicFragmentUpdated()
 {
 	ApplyDynamicFragmentsToManifest();
 }
 
-void UInv_ItemComponent::UpdateManifestData(TArray<FInstancedStruct>& StaticFragments, TArray<FInstancedStruct>& NewDynamicFragments)
+void UInv_ItemComponent::UpdateManifestData(TArray<FInstancedStruct>& StaticFragments, const FInv_ItemFragmentArray& NewDynamicFragments)
 {
 	// Process static fragments first
 	for (FInstancedStruct& StaticItemFragment : StaticFragments)
@@ -96,13 +114,13 @@ void UInv_ItemComponent::UpdateManifestData(TArray<FInstancedStruct>& StaticFrag
 	}
 
 	// Process dynamic fragments - they override static fragments
-	for (FInstancedStruct& DynamicFragment : NewDynamicFragments)
+	for (const FInv_ItemFragmentArrayItem& DynamicFragmentItem : NewDynamicFragments.Items)
 	{
-		if (const FInv_ItemFragment* FragmentBase = DynamicFragment.GetPtr<FInv_ItemFragment>())
+		if (const FInv_ItemFragment* FragmentBase = DynamicFragmentItem.Fragment.GetPtr<FInv_ItemFragment>())
 		{
 			const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
 			// Dynamic fragments always override static ones
-			FragmentsMap.FindOrAdd(FragmentTag) = &DynamicFragment;
+			FragmentsMap.FindOrAdd(FragmentTag) = const_cast<FInstancedStruct*>(&DynamicFragmentItem.Fragment);
 		}
 	}
 }

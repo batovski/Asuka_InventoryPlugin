@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Inv_SlottedItem.generated.h"
 
+struct FGameplayTag;
 class UTextBlock;
 class UInv_InventoryItem;
 class UImage;
@@ -38,6 +39,9 @@ public:
 	void SetImageBrush(const FSlateBrush& InBrush) const;
 
 	void UpdateStackCount(int32 StackCount) const;
+
+	UFUNCTION()
+	void OnItemFragmentModified(const FGameplayTag& FragmentTag);
 
 	FSlottedItemClicked OnSlottedItemClicked;
 	FSlottedItemClicked OnSlottedItemDoubleClicked;

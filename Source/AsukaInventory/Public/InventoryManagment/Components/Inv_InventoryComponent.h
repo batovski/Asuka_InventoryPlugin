@@ -65,8 +65,6 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_EquipItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface<IInv_ItemListInterface>& TargetInventory,
 		UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_EquipSlotClicked(UInv_InventoryItem* ItemToEquip, UInv_InventoryItem* ItemToUnEquip);
 
 	UFUNCTION(Server, Reliable)
 	void Server_AddNewItem(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, const FInv_ItemAddingOptions& NewItemAddingOptions);

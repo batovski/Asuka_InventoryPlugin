@@ -4,6 +4,7 @@
 #include "Widgets/Inventory/Spatial/Inv_InventoryGrid.h"
 
 #include "AsukaInventory.h"
+#include "IDetailTreeNode.h"
 #include "Inv_InventorySettings.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/CanvasPanel.h"
@@ -259,12 +260,11 @@ FIntPoint UInv_InventoryGrid::CalculateStaringPoint(const FIntPoint& Coordinates
 
 FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const UInv_ItemComponent* ItemComponent)
 {
-	return HasRoomForItem(ItemComponent->GetItemManifest());
+	return HasRoomForItem(ItemComponent->GetItemManifest().GetFragmentOfType<FInv_GridFragment>(), ItemComponent->GetItemManifest().GetItemType());
 }
 
-FIntPoint UInv_InventoryGrid::GetItemDimensions(const FInv_ItemManifest& Manifest) const
+FIntPoint UInv_InventoryGrid::GetItemDimensions(const FInv_GridFragment* GridFragment) const
 {
-	const FInv_GridFragment* GridFragment = Manifest.GetFragmentOfType<FInv_GridFragment>();
 	return GridFragment ? GridFragment->GetGridSize() : FIntPoint(1, 1);
 }
 
@@ -358,8 +358,10 @@ void UInv_InventoryGrid::PutHoverItemBack()
 {
 	if (!IsValid(GetHoverItem())) return;
 
-	FInv_SlotAvailabilityResult Result = HasRoomForItem(GetHoverItem()->GetInventoryItem()->GetItemManifest(),
-		GetHoverItem()->GetInventoryItem()->GetFragmentStructByTag<FInv_StackableFragment>(FragmentTags::StackableFragment), GetHoverItem()->GetStackCount());
+	FInv_SlotAvailabilityResult Result = HasRoomForItem(GetHoverItem()->GetInventoryItem()->GetFragmentStructByTagMutable<FInv_GridFragment>(FragmentTags::GridFragment),
+		GetHoverItem()->GetInventoryItem()->GetItemManifest().GetItemType(),
+		GetHoverItem()->GetInventoryItem()->GetFragmentStructByTag<FInv_StackableFragment>(FragmentTags::StackableFragment),
+		GetHoverItem()->GetStackCount());
 	Result.Item = GetHoverItem()->GetInventoryItem();
 
 	AddStacks(Result);
@@ -385,12 +387,9 @@ float UInv_InventoryGrid::GetTileSize()
 	return Settings->TileSize;
 }
 
-void UInv_InventoryGrid::RemoveItemFromGrid(const UInv_InventoryItem* Item, const int32 GridIndex)
+void UInv_InventoryGrid::RemoveItemFromGrid(const UInv_InventoryItem* Item, const FIntPoint& Dimensions, const int32 GridIndex)
 {
-	const FInv_GridFragment* GridFragment = Item->GetFragmentStructByTag<FInv_GridFragment>(FragmentTags::GridFragment);
-	if (!GridFragment) return;
-
-	UInv_InventoryStatics::ForEach2D(GridSlots, GridIndex, GridFragment->GetGridSize(), Columns, [&](UInv_GridSlot* GridSlot)
+	UInv_InventoryStatics::ForEach2D(GridSlots, GridIndex, Dimensions, Columns, [&](UInv_GridSlot* GridSlot)
 	{
 			GridSlot->SetInventoryItem(nullptr);
 			GridSlot->SetUpperLeftIndex(INDEX_NONE);
@@ -621,42 +620,36 @@ void UInv_InventoryGrid::BindToOnInventoryToggled(UInv_InventoryBase* MenuBase)
 void UInv_InventoryGrid::DropHoverItemInGrid(const int32 GridIndex) const
 {
 	if (!IsValid(GetHoverItem()->GetInventoryItem())) return;
-	if (const auto SlottedItem = FindSlottedItem(GetHoverItem()->GetInventoryItem()))
+
+	const auto AuthorityInventory = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
+	if (GetHoverItem()->IsHoverItemRotated())
 	{
-		if (const FInv_StackableFragment* StackableFragment = SlottedItem->GetInventoryItem()->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
+		AuthorityInventory->Server_RotateItem(GetHoverItem()->GetInventoryItem());
+	}
+
+	if (const FInv_StackableFragment* StackableFragment = GetHoverItem()->GetInventoryItem()->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
+	{
+		if (StackableFragment->GetStackCount() != GetHoverItem()->GetStackCount())
 		{
-			if (StackableFragment->GetStackCount() != GetHoverItem()->GetStackCount())
-			{
-				//modify old item stack count
-				const auto AuthorityInventory = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
-				AuthorityInventory->Server_UpdateItemStackCount(SlottedItem->GetInventoryItem(), StackableFragment->GetStackCount() - GetHoverItem()->GetStackCount());
-				if (const auto InventoryInterface = GetGridInventoryInterface())
-				{
-					FInv_ItemAddingOptions NewItemAddingOptions;
-					NewItemAddingOptions.StackCount = GetHoverItem()->GetStackCount();
-					NewItemAddingOptions.GridIndex = GridIndex;
-					AuthorityInventory->Server_AddNewItemByItem(InventoryInterface, SlottedItem->GetInventoryItem(), NewItemAddingOptions);
-					AuthorityInventory->Server_MarkItemDirty(InventoryInterface, GetHoverItem()->GetInventoryItem());
-				}
-				return;
-			}
-		}
-		else
-		{
+			//modify old item stack count
+
+			AuthorityInventory->Server_UpdateItemStackCount(GetHoverItem()->GetInventoryItem(), StackableFragment->GetStackCount() - GetHoverItem()->GetStackCount());
 			if (const auto InventoryInterface = GetGridInventoryInterface())
 			{
 				FInv_ItemAddingOptions NewItemAddingOptions;
 				NewItemAddingOptions.StackCount = GetHoverItem()->GetStackCount();
 				NewItemAddingOptions.GridIndex = GridIndex;
-				const auto AuthorityInventory = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
-				AuthorityInventory->Server_ChangeItemGridIndex(InventoryInterface, SlottedItem->GetInventoryItem(), NewItemAddingOptions);
+				AuthorityInventory->Server_AddNewItemByItem(InventoryInterface, GetHoverItem()->GetInventoryItem(), NewItemAddingOptions);
 			}
+			return;
 		}
 	}
+
 	MoveHoverItemFromOneGridToAnother(GridIndex);
 }
 
-FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const FInv_ItemManifest& Manifest, const FInv_StackableFragment* StackableFragment, const int32 GridIndex)
+FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const FInv_GridFragment* GridFragment, const FGameplayTag& ItemType,
+	const FInv_StackableFragment* StackableFragment, const int32 GridIndex)
 {
 	FInv_SlotAvailabilityResult Result;
 	Result.bStackable = StackableFragment != nullptr;
@@ -672,11 +665,11 @@ FInv_SlotAvailabilityResult UInv_InventoryGrid::HasRoomForItem(const FInv_ItemMa
 		{
 			if (AmountToFill == 0) break;
 			if (IsIndexClaimed(CheckedIndices, GridSlot->GetTileIndex())) continue;
-			if (!IsInGridBounds(GridSlot->GetTileIndex(), GetItemDimensions(Manifest))) continue;
+			if (!IsInGridBounds(GridSlot->GetTileIndex(), GetItemDimensions(GridFragment))) continue;
 
 			TSet<int32> MaybeClaimed;
-			FIntPoint Dimensions = GetItemDimensions(Manifest);
-			if (!HasRoomAtIndex(GridSlot, Dimensions, CheckedIndices, MaybeClaimed, Manifest.GetItemType(), MaxStackSize))
+			FIntPoint Dimensions = GetItemDimensions(GridFragment);
+			if (!HasRoomAtIndex(GridSlot, Dimensions, CheckedIndices, MaybeClaimed, ItemType, MaxStackSize))
 			{
 				continue;
 			}
@@ -723,7 +716,9 @@ void UInv_InventoryGrid::AddItem(UInv_InventoryItem* Item)
 {
 	if (!IsValid(Item)) return;
 	FInv_StackableFragment* StackableFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment);
-	FInv_SlotAvailabilityResult Result = HasRoomForItem(Item->GetItemManifest(), StackableFragment, Item->GetItemIndex());
+	FInv_SlotAvailabilityResult Result = HasRoomForItem(Item->GetFragmentStructByTagMutable<FInv_GridFragment>(FragmentTags::GridFragment),
+		Item->GetItemManifest().GetItemType(),
+		StackableFragment, Item->GetItemIndex());
 	AddItemToIndices(Result, Item);
 }
 
@@ -732,7 +727,7 @@ void UInv_InventoryGrid::RemoveItem(UInv_InventoryItem* Item)
 	if (UInv_SlottedItem* SlottedItem = FindSlottedItem(Item))
 	{
 		const int32 Index = SlottedItem->GetGridIndex();
-		RemoveItemFromGrid(SlottedItem->GetInventoryItem(), Index);
+		RemoveItemFromGrid(SlottedItem->GetInventoryItem(), SlottedItem->GetGridDimensions(), Index);
 	}
 }
 
@@ -822,7 +817,7 @@ UInv_SlottedItem* UInv_InventoryGrid::CreateSlottedItem(UInv_InventoryItem* NewI
 	SlottedItem->SetInventoryItem(NewItem);
 	SetSlottedItemImage(GridFragment, ImageFragment, SlottedItem);
 	SlottedItem->SetGridIndex(Index);
-
+	SlottedItem->SetGridDimensions(GridFragment->GetGridSize());
 	SlottedItem->SetIsStackable(bStackable);
 	const int32 StackUpdateAmount = bStackable ? StackAmount : 0;
 	SlottedItem->UpdateStackCount(StackUpdateAmount);
@@ -844,7 +839,10 @@ void UInv_InventoryGrid::SetSlottedItemImage(const FInv_GridFragment* GridFragme
 FVector2D UInv_InventoryGrid::GetDrawSize(const float TileSize, const FInv_GridFragment* GridFragment)
 {
 	const float IconTileWidth = TileSize - GridFragment->GetGridPadding() * 2;
-	return GridFragment->GetGridSize() * IconTileWidth;
+	const FIntPoint RealDrawSize = GridFragment->GetAlignment() == EInv_ItemAlignment::Horizontal
+	? GridFragment->GetGridSize()
+	: FIntPoint(GridFragment->GetGridSize().Y, GridFragment->GetGridSize().X);
+	return RealDrawSize * IconTileWidth;
 }
 
 void UInv_InventoryGrid::ConstructGrid()
@@ -979,11 +977,6 @@ void UInv_InventoryGrid::OnPopUpMenuConsume(int32 Index)
 	SlottedItems.FindChecked(UpperLeftIndex)->UpdateStackCount(NewStackCount);
 	const auto AuthorityInventory = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
 	AuthorityInventory->Server_ConsumeItem(ClickedInventoryItem);
-
-	if(NewStackCount <= 0)
-	{
-		RemoveItemFromGrid(ClickedInventoryItem, Index);
-	}
 }
 
 void UInv_InventoryGrid::OnPopUpMenuEquip(int32 Index)
@@ -998,20 +991,6 @@ bool UInv_InventoryGrid::IsSameStackable(const UInv_InventoryItem* ClickedInvent
 {
 	const bool bIsStackable = ClickedInventoryItem->IsStackable();
 	return bIsStackable && GetHoverItem()->GetItemType().MatchesTagExact(ClickedInventoryItem->GetItemManifest().GetItemType());
-}
-
-void UInv_InventoryGrid::SwapWithHoverItem(UInv_InventoryItem* ClickedInventoryItem, const int32 GridIndex)
-{
-	if (!IsValid(GetHoverItem())) return;
-
-	UInv_InventoryItem* TempInventoryItem = GetHoverItem()->GetInventoryItem();
-	const int32 TempStackCount = GetHoverItem()->GetStackCount();
-	const bool bIsStackable = GetHoverItem()->IsStackable();
-
-	AssignHoverItem(ClickedInventoryItem, GridIndex, GetHoverItem()->GetPreviousGridIndex());
-	RemoveItemFromGrid(ClickedInventoryItem, GridIndex);
-	AddItemAtIndex(TempInventoryItem, ItemDropIndex, bIsStackable, TempStackCount);
-	UpdateGridSlots(TempInventoryItem, ItemDropIndex, bIsStackable, TempStackCount);
 }
 
 bool UInv_InventoryGrid::ShouldSwapStackCounts(const int32 RoomInClickedSlot, const int32 HoveredStackCount,

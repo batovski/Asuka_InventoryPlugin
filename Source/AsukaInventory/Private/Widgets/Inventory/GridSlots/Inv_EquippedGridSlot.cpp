@@ -73,6 +73,7 @@ void UInv_EquippedGridSlot::SetOccupiedSlot()
 
 void UInv_EquippedGridSlot::UnHighlightSlot(const UInv_InventoryItem* HoverItem)
 {
+	if (!HoverItem) return;
 	if (IsValid(EquippedSlottedItemInstance)) return;
 	if (HoverItem->GetItemManifest().GetItemType().MatchesTag(GetEquipmentTypeTag()))
 	{
@@ -140,14 +141,10 @@ UInv_EquippedSlottedItem* UInv_EquippedGridSlot::CreateEquippedSlottedItem(UInv_
 	EquippedSlottedItemInstance->SetImageBrush(Brush);
 
 	Overlay_Root->AddChild(EquippedSlottedItemInstance);
-	const FGeometry OverlayGeometry = Overlay_Root->GetCachedGeometry();
-	const auto OverlaySize = OverlayGeometry.Size;
-
-	const float LeftPadding = OverlaySize.X / 2.f - DrawSize.X / 2.f;
-	const float TopPadding = OverlaySize.Y / 2.f - DrawSize.Y / 2.f;
 
 	UOverlaySlot* OverlaySlot = UWidgetLayoutLibrary::SlotAsOverlaySlot(EquippedSlottedItemInstance);
-	OverlaySlot->SetPadding(FMargin(LeftPadding, TopPadding));
+	OverlaySlot->SetHorizontalAlignment(HAlign_Center);
+	OverlaySlot->SetVerticalAlignment(VAlign_Center);
 	EquippedSlottedItemInstance->OnEquippedSlottedItemClicked.AddDynamic(SpatialInventory.Get(), &UInv_SpatialInventory::EquippedSlottedItemClicked);
 	return EquippedSlottedItemInstance;
 }

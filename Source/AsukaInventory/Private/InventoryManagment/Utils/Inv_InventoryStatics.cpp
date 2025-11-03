@@ -174,9 +174,7 @@ void UInv_InventoryStatics::SetFragmentFloatProperty(UInv_InventoryItem* Item, F
 	// Force replication: We need to touch the DynamicItemFragments array to trigger replication
 	if (IsSucceeded)
 	{
-		FInstancedStruct CopyFragment = *Fragment;
-		Fragment = &CopyFragment;
-		Item->OnItemFragmentModified.Broadcast(FragmentType);
+		Item->MarkDynamicFragmentDirty(Fragment->GetPtr<FInv_ItemFragment>());
 	}
 }
 

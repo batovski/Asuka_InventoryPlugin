@@ -7,6 +7,7 @@
 #include "Components/TextBlock.h"
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 #include "Items/Inv_InventoryItem.h"
+#include "Widgets/Inventory/HoverItem/Inv_HoverItem.h"
 
 FReply UInv_SlottedItem::NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
@@ -37,6 +38,17 @@ void UInv_SlottedItem::NativeOnMouseLeave(const FPointerEvent& MouseEvent)
 
 void UInv_SlottedItem::SetInventoryItem(UInv_InventoryItem* InInventoryItem)
 {
+	if(nullptr == InInventoryItem)
+	{
+		InventoryItem->OnFragmentModified.RemoveDynamic(this, &ThisClass::OnItemFragmentModified);
+	}
+	else
+	{
+		if (!InInventoryItem->OnFragmentModified.IsAlreadyBound(this, &ThisClass::OnItemFragmentModified))
+		{
+			InInventoryItem->OnFragmentModified.AddDynamic(this, &ThisClass::OnItemFragmentModified);
+		}
+	}
 	InventoryItem = InInventoryItem;
 }
 
@@ -45,6 +57,17 @@ void UInv_SlottedItem::SetImageBrush(const FSlateBrush& InBrush) const
 	if (Image_Icon)
 	{
 		Image_Icon->SetBrush(InBrush);
+	}
+	const auto GridFragment = InventoryItem->GetFragmentStructByTagMutable<FInv_GridFragment>(FragmentTags::GridFragment);
+	const auto GridAlignment = GridFragment->GetAlignment();
+	UInv_HoverItem::RotateImage(Image_Icon, FVector2D(0.f, 0.f), GridAlignment);
+
+	if (GridAlignment == EInv_ItemAlignment::Vertical)
+		Image_Icon->SetRenderTranslation(FVector2D(0, Image_Icon->GetBrush().GetImageSize().X));
+	else
+	{
+		Image_Icon->SetRenderTransformPivot(FVector2D(0.5, 0.5));
+		Image_Icon->SetRenderTranslation(FVector2D::ZeroVector);
 	}
 }
 
@@ -58,5 +81,16 @@ void UInv_SlottedItem::UpdateStackCount(int32 StackCount) const
 	else
 	{
 		Text_StackCount->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UInv_SlottedItem::OnItemFragmentModified(const FGameplayTag& FragmentTag)
+{
+	if(FragmentTag == FragmentTags::StackableFragment)
+	{
+		if(const auto StackFragment = InventoryItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
+		{
+			UpdateStackCount(StackFragment->GetStackCount());
+		}
 	}
 }

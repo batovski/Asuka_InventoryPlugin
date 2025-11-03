@@ -5,8 +5,155 @@
 
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 #include "Items/Fragments/Inv_ItemFragment.h"
+#include "Items/Components/Inv_ItemComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Widgets/Composite/Inv_CompositeBase.h"
+
+void FInv_ItemFragmentArray::UpdateFragmentsMap(TMap<FGameplayTag, FInstancedStruct*>& FragmentsMap, const TArrayView<int32> Indices)
+{
+	for (int32 Index : Indices)
+	{
+		if (Items.IsValidIndex(Index))
+		{
+			const FInstancedStruct& Fragment = Items[Index].Fragment;
+			if (const FInv_ItemFragment* FragmentBase = Fragment.GetPtr<FInv_ItemFragment>())
+			{
+				const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+				FragmentsMap.FindOrAdd(FragmentTag) = const_cast<FInstancedStruct*>(&Fragment);
+			}
+		}
+	}
+}
+
+void FInv_ItemFragmentArray::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize)
+{
+	if (!Owner)
+	{
+		return;
+	}
+
+	if (UInv_InventoryItem* OwnerItem = Cast<UInv_InventoryItem>(Owner))
+	{
+		UpdateFragmentsMap(OwnerItem->FragmentsMap, AddedIndices);
+
+		for (int32 Index : AddedIndices)
+		{
+			if (Items.IsValidIndex(Index))
+			{
+				if (const FInv_ItemFragment* FragmentBase = Items[Index].Fragment.GetPtr<FInv_ItemFragment>())
+				{
+					const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+					OwnerItem->OnFragmentAdded.Broadcast(FragmentTag);
+				}
+			}
+		}
+	}
+
+	else if (UInv_ItemComponent* OwnerComponent = Cast<UInv_ItemComponent>(Owner))
+	{
+		UpdateFragmentsMap(OwnerComponent->FragmentsMap, AddedIndices);
+
+		for (int32 Index : AddedIndices)
+		{
+			if (Items.IsValidIndex(Index))
+			{
+				if (const FInv_ItemFragment* FragmentBase = Items[Index].Fragment.GetPtr<FInv_ItemFragment>())
+				{
+					const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+					OwnerComponent->OnFragmentAdded.Broadcast(FragmentTag);
+				}
+			}
+		}
+	}
+}
+
+void FInv_ItemFragmentArray::PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize)
+{
+	if (!Owner)
+	{
+		return;
+	}
+
+	if (UInv_InventoryItem* OwnerItem = Cast<UInv_InventoryItem>(Owner))
+	{
+		UpdateFragmentsMap(OwnerItem->FragmentsMap, ChangedIndices);
+
+		for (int32 Index : ChangedIndices)
+		{
+			if (Items.IsValidIndex(Index))
+			{
+				if (const FInv_ItemFragment* FragmentBase = Items[Index].Fragment.GetPtr<FInv_ItemFragment>())
+				{
+					const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+					OwnerItem->OnFragmentModified.Broadcast(FragmentTag);
+				}
+			}
+		}
+	}
+	else if (UInv_ItemComponent* OwnerComponent = Cast<UInv_ItemComponent>(Owner))
+	{
+		UpdateFragmentsMap(OwnerComponent->FragmentsMap, ChangedIndices);
+
+		for (int32 Index : ChangedIndices)
+		{
+			if (Items.IsValidIndex(Index))
+			{
+				if (const FInv_ItemFragment* FragmentBase = Items[Index].Fragment.GetPtr<FInv_ItemFragment>())
+				{
+					const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+					OwnerComponent->OnFragmentModified.Broadcast(FragmentTag);
+				}
+			}
+		}
+	}
+}
+
+void FInv_ItemFragmentArray::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
+{
+	if (!Owner)
+	{
+		return;
+	}
+
+	if (UInv_InventoryItem* OwnerItem = Cast<UInv_InventoryItem>(Owner))
+	{
+		UpdateFragmentsMap(OwnerItem->FragmentsMap, RemovedIndices);
+
+		for (int32 Index : RemovedIndices)
+		{
+			if (Items.IsValidIndex(Index))
+			{
+				if (const FInv_ItemFragment* FragmentBase = Items[Index].Fragment.GetPtr<FInv_ItemFragment>())
+				{
+					const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+					OwnerItem->OnFragmentRemoved.Broadcast(FragmentTag);
+				}
+			}
+		}
+	}
+	else if (UInv_ItemComponent* OwnerComponent = Cast<UInv_ItemComponent>(Owner))
+	{
+		UpdateFragmentsMap(OwnerComponent->FragmentsMap, RemovedIndices);
+
+		for (int32 Index : RemovedIndices)
+		{
+			if (Items.IsValidIndex(Index))
+			{
+				if (const FInv_ItemFragment* FragmentBase = Items[Index].Fragment.GetPtr<FInv_ItemFragment>())
+				{
+					const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
+					OwnerComponent->OnFragmentRemoved.Broadcast(FragmentTag);
+				}
+			}
+		}
+	}
+}
+
+void UInv_InventoryItem::PostInitProperties()
+{
+	Super::PostInitProperties();
+	DynamicItemFragments.Owner = this;
+}
 
 void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -18,8 +165,24 @@ void UInv_InventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 void UInv_InventoryItem::SetDynamicItemFragments(const TArray<FInstancedStruct>& Fragments)
 {
-	DynamicItemFragments = Fragments;
+	DynamicItemFragments.Items.Empty();
+	DynamicItemFragments.Owner = this;
+	for (const FInstancedStruct& Fragment : Fragments)
+	{
+		DynamicItemFragments.Items.Add(FInv_ItemFragmentArrayItem(Fragment));
+	}
+	DynamicItemFragments.MarkArrayDirty();
 	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(), DynamicItemFragments, this);
+}
+
+TArray<FInstancedStruct> UInv_InventoryItem::GetDynamicItemFragments() const
+{
+	TArray<FInstancedStruct> Result;
+	for (const FInv_ItemFragmentArrayItem& Item : DynamicItemFragments.Items)
+	{
+		Result.Add(Item.Fragment);
+	}
+	return Result;
 }
 
 void UInv_InventoryItem::SetStaticItemManifestAssetId(const FPrimaryAssetId& NewAssetId)
@@ -29,6 +192,7 @@ void UInv_InventoryItem::SetStaticItemManifestAssetId(const FPrimaryAssetId& New
 
 void UInv_InventoryItem::LoadStaticItemManifest()
 {
+	DynamicItemFragments.Owner = this;
 	if(!StaticItemManifest.IsValid())
 	{
 		StaticItemManifest = FInstancedStruct::Make<FInv_ItemManifest>(UInv_InventoryStatics::GetItemManifestFromID(StaticItemManifestAssetId));
@@ -87,7 +251,7 @@ bool UInv_InventoryItem::IsEquippable() const
 	return EquipmentFragment != nullptr;
 }
 
-void UInv_InventoryItem::UpdateManifestData(TArray<FInstancedStruct>& StaticFragments, TArray <FInstancedStruct>& DynamicFragments,
+void UInv_InventoryItem::UpdateManifestData(TArray<FInstancedStruct>& StaticFragments, const FInv_ItemFragmentArray& DynamicFragments,
 	const UInv_InventoryItem* Item)
 {
 	// Process static fragments first
@@ -99,37 +263,23 @@ void UInv_InventoryItem::UpdateManifestData(TArray<FInstancedStruct>& StaticFrag
 			if (!FragmentsMap.Contains(FragmentTag))
 			{
 				FragmentsMap.Add(FragmentTag, &StaticItemFragment);
-				
-				if (Item)
-				{
-					// Notify listeners about the modification
-					Item->OnItemFragmentModified.Broadcast(FragmentTag);
-				}
 			}
 		}
 	}
-	
 	// Process dynamic fragments - they override static fragments
-	for (FInstancedStruct& DynamicFragment : DynamicFragments)
+	for (const FInv_ItemFragmentArrayItem& DynamicFragmentItem : DynamicFragments.Items)
 	{
-		if (const FInv_ItemFragment* FragmentBase = DynamicFragment.GetPtr<FInv_ItemFragment>())
+		if (const FInv_ItemFragment* FragmentBase = DynamicFragmentItem.Fragment.GetPtr<FInv_ItemFragment>())
 		{
 			const FGameplayTag& FragmentTag = FragmentBase->GetFragmentTag();
-			// Dynamic fragments always override static ones
-			FragmentsMap.FindOrAdd(FragmentTag) = &DynamicFragment;
-			
-			if (Item)
-			{
-				// Notify listeners about the modification
-				Item->OnItemFragmentModified.Broadcast(FragmentTag);
-			}
+			FragmentsMap.FindOrAdd(FragmentTag) = const_cast<FInstancedStruct*>(&DynamicFragmentItem.Fragment);
 		}
 	}
 }
 
-void UInv_InventoryItem::OnRep_DynamicItemFragments()
+void UInv_InventoryItem::OnDynamicFragmentUpdated()
 {
-	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(),DynamicItemFragments, this);
+	UpdateManifestData(GetItemManifestMutable().GetFragmentsMutable(), DynamicItemFragments, this);
 }
 
 FInstancedStruct* UInv_InventoryItem::GetFragmentStructByTagMutable(const FGameplayTag& FragmentType)
@@ -137,24 +287,25 @@ FInstancedStruct* UInv_InventoryItem::GetFragmentStructByTagMutable(const FGamep
 	return GetFragmentStructByTagMutable(DynamicItemFragments, FragmentsMap, FragmentType);
 }
 
-FInstancedStruct* UInv_InventoryItem::GetFragmentStructByTagMutable(TArray<FInstancedStruct>& DynamicFragments, TMap<FGameplayTag, FInstancedStruct*>& FragmentsMap, const FGameplayTag& FragmentType)
+FInstancedStruct* UInv_InventoryItem::GetFragmentStructByTagMutable(FInv_ItemFragmentArray& DynamicFragments, TMap<FGameplayTag, FInstancedStruct*>& FragmentsMap, const FGameplayTag& FragmentType)
 {
 	if (FInstancedStruct** Fragment = FragmentsMap.Find(FragmentType))
 	{
 		auto FoundFragment = (*Fragment)->GetPtr<FInv_ItemFragment>();
-		auto DynamicFragment = DynamicFragments.FindByPredicate([FoundFragment](const FInstancedStruct& Element)
+		auto* DynamicFragmentItem = DynamicFragments.Items.FindByPredicate([FoundFragment](const FInv_ItemFragmentArrayItem& Element)
 			{
-				if (const FInv_ItemFragment* ElementFragment = Element.GetPtr<FInv_ItemFragment>())
+				if (const FInv_ItemFragment* ElementFragment = Element.Fragment.GetPtr<FInv_ItemFragment>())
 				{
 					return ElementFragment->GetFragmentTag() == FoundFragment->GetFragmentTag();
 				}
 				return false;
 			});
 
-		if (!DynamicFragment && FoundFragment->IsDynamicFragment())
+		if (!DynamicFragmentItem && FoundFragment->IsDynamicFragment())
 		{
-			const int32 index = DynamicFragments.Add(*(*Fragment));
-			FragmentsMap.FindOrAdd(FragmentType) = &DynamicFragments[index];
+			const int32 index = DynamicFragments.Items.Add(FInv_ItemFragmentArrayItem(*(*Fragment)));
+			FragmentsMap.FindOrAdd(FragmentType) = &DynamicFragments.Items[index].Fragment;
+			DynamicFragments.MarkItemDirty(DynamicFragments.Items[index]);
 			Fragment = FragmentsMap.Find(FragmentType);
 		}
 		return (*Fragment);

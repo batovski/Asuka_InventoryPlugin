@@ -25,9 +25,6 @@ TArray<UInv_InventoryItem*> FInv_InventoryFastArray::GetAllItems() const
 
 void FInv_InventoryFastArray::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
 {
-	UInv_InventoryComponent* InventoryComponent = Cast<UInv_InventoryComponent>(OwnerComponent);
-	const bool bIsInventoryComponentAvailable = IsValid(InventoryComponent);
-
 	for(int32 Index : RemovedIndices)
 	{
 		OnItemRemoved.Broadcast(Entries[Index].Item);
@@ -36,8 +33,6 @@ void FInv_InventoryFastArray::PreReplicatedRemove(const TArrayView<int32> Remove
 
 void FInv_InventoryFastArray::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize)
 {
-	UInv_InventoryComponent* InventoryComponent = Cast<UInv_InventoryComponent>(OwnerComponent);
-	const bool bIsInventoryComponentAvailable = IsValid(InventoryComponent);
 	for (int32 Index : AddedIndices)
 	{
 		Entries[Index].Item->LoadStaticItemManifest();
@@ -62,7 +57,7 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ItemComponent* ItemCo
 	if (!IC) return nullptr;
 
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
-	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(ItemComponent->GetStaticItemManifestID(), OwnerComponent, ItemComponent->GetDynamicFragmentsMutable());
+	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(ItemComponent->GetStaticItemManifestID(), OwnerComponent, ItemComponent->GetDynamicFragments());
 
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);

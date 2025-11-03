@@ -26,7 +26,10 @@ class ASUKAINVENTORY_API UInv_HoverItem : public UUserWidget
 {
 	GENERATED_BODY()
 public:
-	void SetImageBrush(const FSlateBrush& Brush, EInv_ItemAlignment Alignment);
+	static void RotateImage(UImage* Image_Icon, const FVector2D& PivotPoint, EInv_ItemAlignment Alignment);
+	bool IsHoverItemRotated() const;
+	void RotateHoverItem();
+	void SetImageBrush(const FSlateBrush& Brush);
 	void UpdateStackCount(const int32 NewStackCount);
 	FGameplayTag GetItemType() const;
 	int32 GetStackCount() const { return StackCount; }
@@ -42,9 +45,6 @@ public:
 	const TScriptInterface<IInv_ItemListInterface>& GetOwningInventory() const { return OwningInventory; }
 	void SetOwningInventory(const TScriptInterface<IInv_ItemListInterface>& Inventory);
 
-	UFUNCTION()
-	void UpdateImage(FGameplayTag ModifiedFragment);
-
 private:
 
 	UPROPERTY(meta = (BindWidget))
@@ -57,6 +57,8 @@ private:
 	FIntPoint GridDimensions;
 	TWeakObjectPtr<UInv_InventoryItem> InventoryItem {nullptr};
 	TScriptInterface<IInv_ItemListInterface> OwningInventory{ nullptr };
+	int32 StackCount{ 0 };
 	bool bIsStackable{ false };
-	int32 StackCount {0};
+	EInv_ItemAlignment ItemAlignment{ EInv_ItemAlignment ::Horizontal};
+	EInv_ItemAlignment OriginalItemAlignment;
 };

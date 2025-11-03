@@ -210,11 +210,9 @@ struct FInv_ImageFragment : public FInv_InventoryItemFragmentAbstract
 	FInv_ImageFragment()
 	{
 		FragmentTag = FragmentTags::IconFragment;
-		bDynamicFragment = true;
 	}
 	UTexture2D* GetIcon() const { return Icon; }
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
-	void RotateIcon();
 private:
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	TObjectPtr<UTexture2D> Icon{ nullptr };

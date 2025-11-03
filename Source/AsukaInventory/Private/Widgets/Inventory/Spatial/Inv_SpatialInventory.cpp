@@ -59,7 +59,10 @@ FInv_SlotAvailabilityResult UInv_SpatialInventory::HasRoomForItem(UInv_Inventory
 	FInv_StackableFragment* StackableFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment);
 	if (TargetGrid)
 	{
-		return TargetGrid->HasRoomForItem(Item->GetItemManifest(), StackableFragment, GridIndex);
+		return TargetGrid->HasRoomForItem(Item->GetFragmentStructByTagMutable<FInv_GridFragment>(FragmentTags::GridFragment),
+			Item->GetItemManifest().GetItemType(),
+			StackableFragment,
+			GridIndex);
 	}
 	return FInv_SlotAvailabilityResult();
 }
@@ -194,9 +197,7 @@ void UInv_SpatialInventory::SetHoverItem(UInv_HoverItem* NewHoverItem)
 void UInv_SpatialInventory::RotateHoverItem()
 {
 	if (!IsValid(GetHoverItem())) return;
-	UInv_InventoryComponent* InventoryComponent = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
-	check(InventoryComponent);
-	InventoryComponent->Server_RotateItem(GetHoverItem()->GetInventoryItem());
+	GetHoverItem()->RotateHoverItem();
 }
 
 void UInv_SpatialInventory::InitGrid(UInv_InventoryGrid* Grid, UInv_ExternalInventoryComponent* ExternalInventoryComponent ,const TArray<UInv_InventoryItem*>& LootList)
@@ -356,7 +357,7 @@ void UInv_SpatialInventory::AssignHoverItem(const TScriptInterface<IInv_ItemList
 	IconBrush.DrawAs = ESlateBrushDrawType::Image;
 	IconBrush.ImageSize = DrawSize * UWidgetLayoutLibrary::GetViewportScale(this);
 
-	GetHoverItem()->SetImageBrush(IconBrush, GridFragment->GetAlignment());
+	GetHoverItem()->SetImageBrush(IconBrush);
 	GetHoverItem()->SetGridDimensions(GridFragment->GetGridSize());
 	GetHoverItem()->SetInventoryItem(InventoryItem);
 	GetHoverItem()->SetIsStackable(InventoryItem->IsStackable());
@@ -375,7 +376,7 @@ void UInv_SpatialInventory::ClearHoverItem()
 	GetHoverItem()->SetIsStackable(false);
 	GetHoverItem()->SetPreviousGridIndex(INDEX_NONE);
 	GetHoverItem()->UpdateStackCount(0);
-	GetHoverItem()->SetImageBrush(FSlateNoResource(), EInv_ItemAlignment::Horizontal);
+	GetHoverItem()->SetImageBrush(FSlateNoResource());
 	GetHoverItem()->SetOwningInventory(nullptr);
 
 	GetHoverItem()->RemoveFromParent();

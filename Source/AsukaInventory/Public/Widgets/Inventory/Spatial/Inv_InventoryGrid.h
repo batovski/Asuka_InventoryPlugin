@@ -45,7 +45,8 @@ public:
 
 	virtual void NativeOnInitialized() override;
 	FInv_SlotAvailabilityResult HasRoomForItem(const UInv_ItemComponent* ItemComponent);
-	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_ItemManifest& Manifest, const FInv_StackableFragment* StackableFragments = nullptr, const int32 GridIndex = -1);
+	FInv_SlotAvailabilityResult HasRoomForItem(const FInv_GridFragment* GridFragment, const FGameplayTag& ItemType,
+		const FInv_StackableFragment* StackableFragments = nullptr, const int32 GridIndex = -1);
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	void SetOwningCanvasPanel(UCanvasPanel* OwningPanel);
@@ -77,7 +78,7 @@ protected:
 	void DropHoverItemInGrid(const int32 GridIndex) const;
 	void AddItemToIndices(const FInv_SlotAvailabilityResult& Result, UInv_InventoryItem* NewItem);
 
-	void RemoveItemFromGrid(const UInv_InventoryItem* Item, const int32 GridIndex);
+	void RemoveItemFromGrid(const UInv_InventoryItem* Item, const FIntPoint& Dimensions, const int32 GridIndex);
 	void SetPendingItemInGrid(UInv_InventoryItem* Item, const int32 GridIndex);
 	void RemoveAllItemFromGrid();
 
@@ -132,7 +133,7 @@ private:
 	bool IsInGridBounds(const int32 StartIndex, const FIntPoint& ItemDimensions) const;
 	void MoveHoverItemFromOneGridToAnother(int32 GridIndex) const;
 
-	FIntPoint GetItemDimensions(const FInv_ItemManifest& Item) const;
+	FIntPoint GetItemDimensions(const FInv_GridFragment* GridFragment) const;
 	bool CheckSlotConstraints(const UInv_GridSlot* GridSlot, const UInv_GridSlot* SubGridSlot,
 		const TSet<int32>& CheckedIndices, TSet<int32>& OUT OutMaybeClaimed,
 		const FGameplayTag& ItemType, const int32 MaxStackSize) const;
@@ -157,7 +158,6 @@ private:
 	void UnHighlightSlots(const int32 Index, const FIntPoint& Dimensions);
 
 	bool IsSameStackable(const UInv_InventoryItem* ClickedInventoryItem) const;
-	void SwapWithHoverItem(UInv_InventoryItem* ClickedInventoryItem, const int32 GridIndex);
 	bool ShouldSwapStackCounts(const int32 RoomInClickedSlot, const int32 HoveredStackCount, const int32 MaxStackSize) const;
 	void SwapStackCounts(const int32 ClickedStackCount, const int32 HoveredStackCount, const int32 GridIndex);
 	bool ShouldConsumeHoverItemStacks(const int32 RoomInClickedSlot, const int32 HoveredStackCount) const;

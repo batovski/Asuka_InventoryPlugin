@@ -62,6 +62,7 @@ void UInv_InventoryComponent::Server_AddNewItemByItem_Implementation(const TScri
 	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(NewItemAddingOptions.StackCount);
+		Item->MarkDynamicFragmentDirty(StackFragment);
 	}
 }
 
@@ -74,6 +75,7 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(const TScrip
 	if (FInv_StackableFragment* StackFragment = FoundItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(StackFragment->GetStackCount() + StackCount);
+		Item->MarkDynamicFragmentDirty(StackFragment);
 	}
 
 	if (Remainder == 0)
@@ -84,6 +86,7 @@ void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(const TScrip
 	{
 		// If the item is stackable, we can update the stack count
 		StackableFragment->SetStackCount(Remainder);
+		Item->MarkDynamicFragmentDirty(StackableFragment);
 	}
 }
 
@@ -97,6 +100,7 @@ void UInv_InventoryComponent::Server_AddStacksToItemByComponent_Implementation(U
 	if(FInv_StackableFragment* StackFragment = FoundItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(StackFragment->GetStackCount() + StackCount);
+		FoundItem->MarkDynamicFragmentDirty(StackFragment);
 	}
 
 	if(Remainder == 0)
@@ -107,6 +111,7 @@ void UInv_InventoryComponent::Server_AddStacksToItemByComponent_Implementation(U
 	{
 		// If the item is stackable, we can update the stack count
 		StackableFragment->SetStackCount(Remainder);
+		ItemComponent->MarkDynamicFragmentDirty(StackableFragment);
 	}
 }
 
@@ -116,10 +121,11 @@ void UInv_InventoryComponent::Server_AddNewItemByComponent_Implementation(UInv_I
 	NewItemAddingOptions.StackCount = StackCount;
 	NewItemAddingOptions.GridIndex = -1;
 
-	UInv_InventoryItem* NewItem = Execute_AddItemToList(SourceInventory.GetObject(), ItemComponent->GetStaticItemManifestID(), ItemComponent->GetDynamicFragmentsMutable(), NewItemAddingOptions);
+	UInv_InventoryItem* NewItem = Execute_AddItemToList(SourceInventory.GetObject(), ItemComponent->GetStaticItemManifestID(), ItemComponent->GetDynamicFragments(), NewItemAddingOptions);
 	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(StackCount);
+		NewItem->MarkDynamicFragmentDirty(StackFragment);
 	}
 
 	ItemComponent->PickedUp();
@@ -140,6 +146,7 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInte
 		if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 		{
 			StackFragment->SetStackCount(NewItemAddingOptions.StackCount);
+			Item->MarkDynamicFragmentDirty(StackFragment);
 		}
 
 		if (FInv_StackableFragment* OldItemStackFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
@@ -149,6 +156,7 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInte
 			else
 			{
 				OldItemStackFragment->SetStackCount(OldItemStackFragment->GetStackCount() - NewItemAddingOptions.StackCount);
+				Item->MarkDynamicFragmentDirty(OldItemStackFragment);
 			}
 		}
 		else
@@ -166,14 +174,13 @@ void UInv_InventoryComponent::Server_DropItem_Implementation(UInv_InventoryItem*
 	{
 		NewStackCount = StackFragment->GetStackCount()- StackCount;
 		StackFragment->SetStackCount(NewStackCount);
+		Item->MarkDynamicFragmentDirty(StackFragment);
 	}
 	if (NewStackCount <= 0)
 	{
 		// Remove the item from the inventory
 		InventoryList.RemoveEntry(Item);
 	}
-	/*if (Item->IsEquippable())
-		Multicast_EquipSlotClicked(nullptr, Item);*/
 	SpawnDroppedItem(Item, StackCount);
 }
 
@@ -265,6 +272,7 @@ void UInv_InventoryComponent::Server_ConsumeItem_Implementation(UInv_InventoryIt
 		else
 		{
 			StackFragment->SetStackCount(NewStackCount);
+			Item->MarkDynamicFragmentDirty(StackFragment);
 		}
 	}
 	if(FInv_ConsumableFragment* ConsumableFragment = Item->GetFragmentStructByTagMutable<FInv_ConsumableFragment>(FragmentTags::ConsumableFragment))
@@ -284,16 +292,6 @@ void UInv_InventoryComponent::Server_EquipItem_Implementation(const TScriptInter
 		Server_RemoveItem(SourceInventory, ItemToUnEquip);
 		Server_AddNewItem(TargetInventory, SourceInventory, ItemToUnEquip, ItemToEquipOptions);
 	}
-	Multicast_EquipSlotClicked(ItemToEquip, ItemToUnEquip);
-}
-
-void UInv_InventoryComponent::Multicast_EquipSlotClicked_Implementation(UInv_InventoryItem* ItemToEquip,
-	UInv_InventoryItem* ItemToUnEquip)
-{
-	/*if(ItemToUnEquip)
-		OnItemUnEquipped.Broadcast(ItemToUnEquip);
-	if (ItemToEquip)
-		OnItemEquipped.Broadcast(ItemToEquip);*/
 }
 
 void UInv_InventoryComponent::Server_MarkItemDirty_Implementation(
@@ -308,6 +306,7 @@ void UInv_InventoryComponent::Server_UpdateItemStackCount_Implementation(UInv_In
 	if (FInv_StackableFragment* StackFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 	{
 		StackFragment->SetStackCount(StackCount);
+		Item->MarkDynamicFragmentDirty(StackFragment);
 	}
 }
 
@@ -322,6 +321,7 @@ void UInv_InventoryComponent::Server_RotateItem_Implementation(UInv_InventoryIte
 	if(const auto GridFragment = Item->GetFragmentStructByTagMutable<FInv_GridFragment>(FragmentTags::GridFragment))
 	{
 		GridFragment->RotateGrid();
+		Item->MarkDynamicFragmentDirty(GridFragment);
 	}
 }
 

@@ -9,12 +9,42 @@
 #include "Items/Inv_InventoryItem.h"
 #include "Widgets/Inventory/Spatial/Inv_InventoryGrid.h"
 
-void UInv_HoverItem::SetImageBrush(const FSlateBrush& Brush, EInv_ItemAlignment Alignment)
+void UInv_HoverItem::RotateImage(UImage* Image_Icon, const FVector2D& PivotPoint, EInv_ItemAlignment Alignment)
+{
+	Image_Icon->SetRenderTransformPivot(PivotPoint);
+
+	if (Alignment == EInv_ItemAlignment::Horizontal)
+	{
+		Image_Icon->SetRenderTransformAngle(0.f);
+	}
+	else
+	{
+		Image_Icon->SetRenderTransformAngle(-90.f);
+	}
+}
+
+bool UInv_HoverItem::IsHoverItemRotated() const
+{
+	return ItemAlignment != OriginalItemAlignment;
+}
+
+void UInv_HoverItem::RotateHoverItem()
+{
+	if (ItemAlignment == EInv_ItemAlignment::Horizontal)
+	{
+		ItemAlignment = EInv_ItemAlignment::Vertical;
+	}
+	else
+	{
+		ItemAlignment = EInv_ItemAlignment::Horizontal;
+	}
+	SetGridDimensions(FIntPoint(GridDimensions.Y, GridDimensions.X));
+	RotateImage(Image_Icon, FVector2D(0.5f, 0.5f), ItemAlignment);
+}
+
+void UInv_HoverItem::SetImageBrush(const FSlateBrush& Brush)
 {
 	Image_Icon->SetBrush(Brush);
-	Alignment == EInv_ItemAlignment::Horizontal
-	? SetRenderTransformAngle(0.f)
-	: SetRenderTransformAngle(90.f);
 }
 
 void UInv_HoverItem::UpdateStackCount(const int32 NewStackCount)
@@ -28,18 +58,6 @@ void UInv_HoverItem::UpdateStackCount(const int32 NewStackCount)
 	else
 	{
 		Text_StackCount->SetVisibility(ESlateVisibility::Collapsed);
-	}
-}
-
-void UInv_HoverItem::UpdateImage(FGameplayTag ModifiedFragment)
-{
-	if (ModifiedFragment == FragmentTags::GridFragment)
-	{
-		const auto GridFragment = InventoryItem->GetFragmentStructByTagMutable<FInv_GridFragment>(FragmentTags::GridFragment);
-		const EInv_ItemAlignment Alignment = GridFragment->GetAlignment();
-		Alignment == EInv_ItemAlignment::Horizontal
-			? SetRenderTransformAngle(0.f)
-			: SetRenderTransformAngle(90.f);
 	}
 }
 
@@ -68,15 +86,15 @@ UInv_InventoryItem* UInv_HoverItem::GetInventoryItem() const
 
 void UInv_HoverItem::SetInventoryItem(UInv_InventoryItem* Item)
 {
-	if(Item == nullptr && InventoryItem.IsValid())
-	{
-		InventoryItem->OnItemFragmentModified.RemoveDynamic(this, &ThisClass::UpdateImage);
-	}
 	InventoryItem = Item;
-
-	if(InventoryItem.IsValid() && !InventoryItem->OnItemFragmentModified.IsAlreadyBound(this, &ThisClass::UpdateImage))
+	if (nullptr != InventoryItem)
 	{
-		InventoryItem->OnItemFragmentModified.AddDynamic(this, &ThisClass::UpdateImage);
+		if (const auto GridFragment = InventoryItem->GetFragmentStructByTagMutable<FInv_GridFragment>(FragmentTags::GridFragment))
+		{
+			OriginalItemAlignment = GridFragment->GetAlignment();
+			ItemAlignment = OriginalItemAlignment;
+			RotateImage(Image_Icon, FVector2D(0.5f, 0.5f), ItemAlignment);
+		}
 	}
 }
 

@@ -210,7 +210,7 @@ void UInv_SpatialInventory::InitGrid(UInv_InventoryGrid* Grid, UInv_ExternalInve
 	{
 		Grid->AddItem(Item);
 	}
-	Grid->SetVisibility(ESlateVisibility::Visible);
+	Grid->OnVisible();
 	Grid->BindToOnInventoryToggled(this);
 }
 
@@ -477,7 +477,7 @@ void UInv_SpatialInventory::TryToEquipItem(const TScriptInterface<IInv_ItemListI
 void UInv_SpatialInventory::ItemEquipped(UInv_InventoryItem* Item)
 {
 	if (!IsValid(Item)) return;
-	if(const FInv_ContainerFragment* ContainerFragment = Item->GetFragmentStructByTagMutable<FInv_ContainerFragment>(FragmentTags::EquipmentFragment))
+	if(const FInv_ContainerFragment* ContainerFragment = Item->GetFragmentStructByTagMutable<FInv_ContainerFragment>(FragmentTags::ContainerFragment))
 	{
 		if (UInv_ExternalInventoryComponent* OwningInventoryComponent = ContainerFragment->ContainerInventoryComponent)
 		{
@@ -489,7 +489,7 @@ void UInv_SpatialInventory::ItemEquipped(UInv_InventoryItem* Item)
 void UInv_SpatialInventory::ItemUnEquipped(UInv_InventoryItem* Item)
 {
 	if (!IsValid(Item)) return;
-	if (const FInv_ContainerFragment* ContainerFragment = Item->GetFragmentStructByTagMutable<FInv_ContainerFragment>(FragmentTags::EquipmentFragment))
+	if (const FInv_ContainerFragment* ContainerFragment = Item->GetFragmentStructByTagMutable<FInv_ContainerFragment>(FragmentTags::ContainerFragment))
 	{
 		if (UInv_ExternalInventoryComponent* OwningInventoryComponent = ContainerFragment->ContainerInventoryComponent)
 		{

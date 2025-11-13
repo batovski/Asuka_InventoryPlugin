@@ -58,8 +58,23 @@ public:
 		float Value,
 		bool& IsSucceeded);
 
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
+	static void SetFragmentIntProperty(UInv_InventoryItem* Item,
+		UPARAM(meta = (Categories = "FragmentTags"))
+		FGameplayTag FragmentType,
+		const FString& PropertyName,
+		int32 Value,
+		bool& IsSucceeded);
+
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	static float GetFragmentFloatProperty(UInv_InventoryItem* Item,
+		UPARAM(meta = (Categories = "FragmentTags"))
+		FGameplayTag FragmentType,
+		const FString& PropertyName,
+		bool& IsSucceeded);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	static int32 GetFragmentIntProperty(UInv_InventoryItem* Item,
 		UPARAM(meta = (Categories = "FragmentTags"))
 		FGameplayTag FragmentType,
 		const FString& PropertyName,

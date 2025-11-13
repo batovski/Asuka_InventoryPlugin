@@ -80,6 +80,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	EInv_ItemAlignment Alignment{ EInv_ItemAlignment::Horizontal };
+
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	bool bAllowRotation{ false };
 };
 
 USTRUCT(meta = (HiddenByDefault))
@@ -190,7 +193,7 @@ struct FInv_ConsumableFragment : public FInv_InventoryItemFragmentAbstract
 	virtual void OnConsume(APlayerController* PC);
 	virtual void Assimilate(UInv_CompositeBase* Composite) const override;
 private:
-	UPROPERTY(EditAnywhere, Category="Inventory", meta = (ExcludeBaseStruct))
+	UPROPERTY(EditAnywhere, Category="Inventory")
 	TArray<TInstancedStruct<FInv_ConsumeModifier>> ConsumeModifiers;
 };
 
@@ -199,8 +202,9 @@ USTRUCT(BlueprintType)
 struct FInv_ConsumeModifier : public FInv_LabeledNumberFragment
 {
 	GENERATED_BODY();
-	virtual void OnConsume(APlayerController* PC) {}
-
+	virtual void OnConsume(APlayerController* PC);
+	UPROPERTY(EditAnywhere, Category = "Inventory")
+	TSoftClassPtr<UGameplayEffect> Effect;
 };
 
 USTRUCT(BlueprintType)
@@ -232,13 +236,6 @@ struct FInv_TextFragment : public FInv_UIElementFragmentAbstract
 private:
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	FText FragmentText;
-};
-
-USTRUCT(BlueprintType)
-struct FInv_HealthPotionFragment : public FInv_ConsumeModifier
-{
-	GENERATED_BODY()
-	virtual void OnConsume(APlayerController* PC) override;
 };
 
 // Equipment Fragments :

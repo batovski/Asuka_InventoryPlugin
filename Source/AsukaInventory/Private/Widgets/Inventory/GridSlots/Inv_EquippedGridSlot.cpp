@@ -124,7 +124,6 @@ UInv_EquippedSlottedItem* UInv_EquippedGridSlot::CreateEquippedSlottedItem(UInv_
 
 	EquippedSlottedItemInstance = CreateWidget<UInv_EquippedSlottedItem>(GetOwningPlayer(), EquippedSlottedItemClass);
 	EquippedSlottedItemInstance->SetInventoryItem(Item);
-	EquippedSlottedItemInstance->SetEquipmentTypeTag(EquipmentTypeTag);
 	EquippedSlottedItemInstance->UpdateStackCount(0);
 
 	SetInventoryItem(Item);

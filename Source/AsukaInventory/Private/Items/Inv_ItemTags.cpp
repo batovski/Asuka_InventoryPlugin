@@ -19,6 +19,10 @@ namespace GameItems
 		{
 			UE_DEFINE_GAMEPLAY_TAG(Mask, "GameItems.Equipments.Helmets.Mask");
 		}
+		namespace Backpacks
+		{
+			UE_DEFINE_GAMEPLAY_TAG(Backpack, "GameItems.Equipments.Backpacks.Backpack");
+		}
 	}
 
 	namespace Consumables

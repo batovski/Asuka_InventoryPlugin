@@ -11,7 +11,6 @@
 #include "InventoryManagment/ItemData/Inv_ItemDataAsset.h"
 #include "Items/Inv_InventoryItem.h"
 #include "Widgets/Inventory/Base/Inv_InventoryBase.h"
-#include "Widgets/Inventory/Spatial/Inv_GridsTags.h"
 
 UInv_InventoryComponent* UInv_InventoryStatics::GetInventoryComponent(const APlayerController* PlayerController)
 {
@@ -178,6 +177,109 @@ void UInv_InventoryStatics::SetFragmentFloatProperty(UInv_InventoryItem* Item, F
 	}
 }
 
+void UInv_InventoryStatics::SetFragmentIntProperty(UInv_InventoryItem* Item, FGameplayTag FragmentType,
+	const FString& PropertyName, int32 Value, bool& IsSucceeded)
+{
+	IsSucceeded = false;
+
+	if (!IsValid(Item))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SetFragmentIntProperty: Invalid Item"));
+		return;
+	}
+
+	if (PropertyName.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SetFragmentIntProperty: PropertyName is empty"));
+		return;
+	}
+
+	// Get the fragment
+	FInstancedStruct* Fragment = Item->GetFragmentStructByTagMutable(FragmentType);
+	if (!Fragment)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SetFragmentIntProperty: Fragment not found for tag %s"), *FragmentType.ToString());
+		return;
+	}
+
+	const UScriptStruct* ScriptStruct = Fragment->GetScriptStruct();
+	void* FragmentMemory = Fragment->GetMutableMemory();
+
+	if (!ScriptStruct || !FragmentMemory)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SetFragmentIntProperty: Invalid script struct or memory"));
+		return;
+	}
+
+	// Check if this is a nested property (contains '.')
+	if (PropertyName.Contains(TEXT(".")))
+	{
+		// Handle nested properties like "Stats.Count"
+		TArray<FString> PropertyPath;
+		PropertyName.ParseIntoArray(PropertyPath, TEXT("."), true);
+
+		void* CurrentMemory = FragmentMemory;
+		const UScriptStruct* CurrentStruct = ScriptStruct;
+
+		// Navigate through nested properties
+		for (int32 i = 0; i < PropertyPath.Num() - 1; ++i)
+		{
+			const FProperty* Property = CurrentStruct->FindPropertyByName(*PropertyPath[i]);
+			if (!Property)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("SetFragmentIntProperty: Property '%s' not found in struct '%s'"),
+					*PropertyPath[i], *CurrentStruct->GetName());
+				return;
+			}
+
+			// Check if this is a struct property
+			if (const FStructProperty* StructProperty = CastField<FStructProperty>(Property))
+			{
+				CurrentMemory = StructProperty->ContainerPtrToValuePtr<void>(CurrentMemory);
+				CurrentStruct = StructProperty->Struct;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("SetFragmentIntProperty: Property '%s' is not a struct, cannot navigate further"),
+					*PropertyPath[i]);
+				return;
+			}
+		}
+
+		// Now set the final property
+		const FString& FinalPropertyName = PropertyPath.Last();
+		const FIntProperty* IntProperty = CastField<FIntProperty>(CurrentStruct->FindPropertyByName(*FinalPropertyName));
+
+		if (!IntProperty)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("SetFragmentIntProperty: Final property '%s' is not an int property"), *FinalPropertyName);
+			return;
+		}
+		IntProperty->SetPropertyValue_InContainer(CurrentMemory, Value);
+		IsSucceeded = true;
+	}
+	else
+	{
+		// Handle direct properties
+		const FIntProperty* IntProperty = CastField<FIntProperty>(ScriptStruct->FindPropertyByName(*PropertyName));
+
+		if (!IntProperty)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("SetFragmentIntProperty: Property '%s' not found or is not an int property"), *PropertyName);
+			return;
+		}
+
+		IntProperty->SetPropertyValue_InContainer(FragmentMemory, Value);
+		IsSucceeded = true;
+	}
+
+	// Force replication: We need to touch the DynamicItemFragments array to trigger replication
+	if (IsSucceeded)
+	{
+		Item->MarkDynamicFragmentDirty(Fragment->GetPtr<FInv_ItemFragment>());
+	}
+}
+
 float UInv_InventoryStatics::GetFragmentFloatProperty(UInv_InventoryItem* Item, FGameplayTag FragmentType,
 	const FString& PropertyName, bool& IsSucceeded)
 {
@@ -292,13 +394,130 @@ float UInv_InventoryStatics::GetFragmentFloatProperty(UInv_InventoryItem* Item, 
 	}
 }
 
+int32 UInv_InventoryStatics::GetFragmentIntProperty(UInv_InventoryItem* Item, FGameplayTag FragmentType,
+	const FString& PropertyName, bool& IsSucceeded)
+{
+	IsSucceeded = false;
+	int32 DefaultValue = 0;
+	
+	if (!IsValid(Item))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetFragmentIntProperty: Invalid Item"));
+		return DefaultValue;
+	}
+
+	if (PropertyName.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetFragmentIntProperty: PropertyName is empty"));
+		return DefaultValue;
+	}
+
+	// Get the fragment (const version since we're only reading)
+	const FInstancedStruct* Fragment = nullptr;
+	if (FInstancedStruct* MutableFragment = Item->GetFragmentStructByTagMutable(FragmentType))
+	{
+		Fragment = MutableFragment;
+	}
+	
+	if (!Fragment)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetFragmentIntProperty: Fragment not found for tag %s"), *FragmentType.ToString());
+		return DefaultValue;
+	}
+
+	const UScriptStruct* ScriptStruct = Fragment->GetScriptStruct();
+	const void* FragmentMemory = Fragment->GetMemory();
+
+	if (!ScriptStruct || !FragmentMemory)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GetFragmentIntProperty: Invalid script struct or memory"));
+		return DefaultValue;
+	}
+
+	// Check if this is a nested property (contains '.')
+	if (PropertyName.Contains(TEXT(".")))
+	{
+		// Handle nested properties like "Stats.Count"
+		TArray<FString> PropertyPath;
+		PropertyName.ParseIntoArray(PropertyPath, TEXT("."), true);
+		
+		const void* CurrentMemory = FragmentMemory;
+		const UScriptStruct* CurrentStruct = ScriptStruct;
+		
+		// Navigate through nested properties
+		for (int32 i = 0; i < PropertyPath.Num() - 1; ++i)
+		{
+			const FProperty* Property = CurrentStruct->FindPropertyByName(*PropertyPath[i]);
+			if (!Property)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("GetFragmentIntProperty: Property '%s' not found in struct '%s'"), 
+					*PropertyPath[i], *CurrentStruct->GetName());
+				return DefaultValue;
+			}
+
+			// Check if this is a struct property
+			if (const FStructProperty* StructProperty = CastField<FStructProperty>(Property))
+			{
+				CurrentMemory = StructProperty->ContainerPtrToValuePtr<const void>(CurrentMemory);
+				CurrentStruct = StructProperty->Struct;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("GetFragmentIntProperty: Property '%s' is not a struct, cannot navigate further"), 
+					*PropertyPath[i]);
+				return DefaultValue;
+			}
+		}
+		
+		// Now get the final property value
+		const FString& FinalPropertyName = PropertyPath.Last();
+		const FIntProperty* IntProperty = CastField<FIntProperty>(CurrentStruct->FindPropertyByName(*FinalPropertyName));
+		
+		if (!IntProperty)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GetFragmentIntProperty: Final property '%s' is not an int property"), *FinalPropertyName);
+			return DefaultValue;
+		}
+		
+		const int32 Value = IntProperty->GetPropertyValue_InContainer(CurrentMemory);
+		IsSucceeded = true;
+		
+		UE_LOG(LogTemp, VeryVerbose, TEXT("GetFragmentIntProperty: Successfully read property '%s' = %d from fragment '%s'"), 
+			*PropertyName, Value, *FragmentType.ToString());
+			
+		return Value;
+	}
+	else
+	{
+		// Handle direct properties
+		const FIntProperty* IntProperty = CastField<FIntProperty>(ScriptStruct->FindPropertyByName(*PropertyName));
+		
+		if (!IntProperty)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GetFragmentIntProperty: Property '%s' not found or is not an int property"), *PropertyName);
+			return DefaultValue;
+		}
+		
+		const int32 Value = IntProperty->GetPropertyValue_InContainer(FragmentMemory);
+		IsSucceeded = true;
+		
+		UE_LOG(LogTemp, VeryVerbose, TEXT("GetFragmentIntProperty: Successfully read property '%s' = %d from fragment '%s'"), 
+			*PropertyName, Value, *FragmentType.ToString());
+			
+		return Value;
+	}
+}
 const UInv_InventoryItem* UInv_InventoryStatics::GetInventoryItemFromPlayerController(const APlayerController* PlayerController, FGameplayTag ItemType)
 {
-	UInv_InventoryComponent* IC = GetInventoryComponent(PlayerController);
+	const UInv_InventoryComponent* IC = GetInventoryComponent(PlayerController);
 	if (!IsValid(IC)) return nullptr;
 	const UInv_InventoryItem* Item = IC->FindInventoryItem(ItemType);
-	if (!IsValid(Item)) return nullptr;
-	return Item;
+	if (IsValid(Item)) return Item;
+	const UInv_EquipmentComponent* EC = GetEquipmentComponent(PlayerController);
+	if (!IsValid(EC)) return nullptr;
+	Item = EC->Execute_FindFirstItemByType(EC, ItemType);
+	if (IsValid(Item)) return Item;
+	return nullptr;
 }
 
 const UInv_InventoryItem* UInv_InventoryStatics::GetEquipmentItemFromPlayerController(

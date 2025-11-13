@@ -11,11 +11,10 @@
 #include "Widgets/Composite/Inv_Leaf_Text.h"
 #include "Engine/SkeletalMesh.h"
 #include "AbilitySystemGlobals.h"
+#include "GameplayEffect.h"
 #include "InventoryManagment/Components/Inv_ExternalInventoryComponent.h"
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
-#include "InventoryManagment/Utils/Inv_InventoryStatics.h"
 #include "Items/Inv_ContainerHolderActor.h"
-#include "Widgets/Inventory/Spatial/Inv_SpatialInventory.h"
 
 
 void FInv_ImageFragment::Assimilate(UInv_CompositeBase* Composite) const
@@ -63,12 +62,6 @@ void FInv_LabeledNumberFragment::Manifest(UObject* Owner)
 		Value = FMath::RandRange(Min, Max);
 	}
 	bRandomizeOnManifest = false;
-}
-
-void FInv_HealthPotionFragment::OnConsume(APlayerController* PC)
-{
-	FInv_ConsumeModifier::OnConsume(PC);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,FString::Printf(TEXT("health Potion consumed! Healing by: %f"), GetValue()));
 }
 
 void FInv_GridFragment::RotateGrid()
@@ -122,6 +115,31 @@ void FInv_ConsumableFragment::Assimilate(UInv_CompositeBase* Composite) const
 	{
 		if (!Modifier.IsValid()) continue;
 		Modifier.Get().Assimilate(Composite);
+	}
+}
+
+void FInv_ConsumeModifier::OnConsume(APlayerController* PC)
+{
+	if (!PC || !PC->GetPawn()) return;
+	if (const auto ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(PC->GetPawn()))
+	{
+		if (TSubclassOf<UGameplayEffect> LoadedEffect = Effect.LoadSynchronous())
+		{
+			FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+			EffectContext.AddSourceObject(PC->GetPawn());
+			FGameplayEffectSpecHandle EffectSpecHandle = ASC->MakeOutgoingSpec(LoadedEffect, 1.0f, EffectContext);
+			if (EffectSpecHandle.IsValid())
+			{
+				{
+					const FGameplayTag ValueTag = FGameplayTag::RequestGameplayTag(FName(TEXT("Data.Value")), false);
+					if (ValueTag.IsValid())
+					{
+						EffectSpecHandle.Data->SetSetByCallerMagnitude(ValueTag, Value);
+					}
+				}
+				ASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
+			}
+		}
 	}
 }
 

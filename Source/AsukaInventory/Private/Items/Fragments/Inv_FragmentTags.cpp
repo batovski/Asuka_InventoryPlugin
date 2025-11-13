@@ -19,6 +19,7 @@ namespace FragmentTags
 	UE_DEFINE_GAMEPLAY_TAG(WeaponFragment, "FragmentTags.WeaponFragment")
 	UE_DEFINE_GAMEPLAY_TAG(WeaponAnimationsFragment, "FragmentTags.WeaponAnimationsFragment")
 	UE_DEFINE_GAMEPLAY_TAG(WeaponMetaSoundsFragment, "FragmentTags.WeaponMetaSoundsFragment")
+	UE_DEFINE_GAMEPLAY_TAG(WeaponAmmoFragment, "FragmentTags.WeaponAmmoFragment")
 	UE_DEFINE_GAMEPLAY_TAG(SkeltalMeshFragment, "FragmentTags.SkeltonMeshFragment")
 	UE_DEFINE_GAMEPLAY_TAG(AnimLayerFragment, "FragmentTags.AnimLayerFragment")
 	UE_DEFINE_GAMEPLAY_TAG(GameplayAbilitiesFragment, "FragmentTags.GameplayAbilitiesFragment")

@@ -39,6 +39,8 @@ struct FInv_WeaponFragment : public FInv_InventoryItemFragmentAbstract
 	FInv_WeaponModifier AimDistance;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	FInv_WeaponModifier AimViewAngle;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory", meta = (Categories = "GameItems.Ammo"))
+	FGameplayTag AmmoType;
 };
 
 USTRUCT(BlueprintType)

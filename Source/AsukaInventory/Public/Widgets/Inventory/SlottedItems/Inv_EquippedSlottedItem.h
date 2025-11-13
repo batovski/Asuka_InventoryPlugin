@@ -20,14 +20,6 @@ class ASUKAINVENTORY_API UInv_EquippedSlottedItem : public UInv_SlottedItem
 public:
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 
-	void SetEquipmentTypeTag(const FGameplayTag& InEquipmentTypeTag) { EquipmentTypeTag = InEquipmentTypeTag; }
-	const FGameplayTag& GetEquipmentTypeTag() const { return EquipmentTypeTag; }
-
 	FEquippedSlottedItemClicked OnEquippedSlottedItemClicked;
-
-private:
-
-	UPROPERTY()
-	FGameplayTag EquipmentTypeTag;
 	
 };

@@ -914,6 +914,11 @@ void UInv_InventoryGrid::OnHide()
 	SetVisibility(ESlateVisibility::Collapsed);
 }
 
+void UInv_InventoryGrid::OnVisible()
+{
+	SetVisibility(ESlateVisibility::Visible);
+}
+
 
 void UInv_InventoryGrid::OnGridSlotHovered(int32 GridIndex, const FPointerEvent& MouseEvent)
 {

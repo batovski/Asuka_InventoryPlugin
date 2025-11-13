@@ -17,6 +17,7 @@ public:
 
 	virtual void NativeOnInitialized() override;
 	virtual void OnHide() override;
+	virtual void OnVisible() override;
 	virtual void CreateGrid(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const int32 NewRows, const int32 NewColumns, const FText& NewGridName) override;
 
 private:

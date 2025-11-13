@@ -21,6 +21,10 @@ namespace GameItems
 		{
 			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Mask);
 		}
+		namespace Backpacks
+		{
+			UE_DECLARE_GAMEPLAY_TAG_EXTERN(Backpack);
+		}
 	}
 
 	namespace Consumables

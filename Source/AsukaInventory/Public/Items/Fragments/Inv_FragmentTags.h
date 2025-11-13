@@ -18,6 +18,7 @@ namespace FragmentTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeaponFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeaponAnimationsFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeaponMetaSoundsFragment)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(WeaponAmmoFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(SkeltalMeshFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(AnimLayerFragment)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayAbilitiesFragment)

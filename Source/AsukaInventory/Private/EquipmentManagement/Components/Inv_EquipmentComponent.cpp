@@ -6,6 +6,7 @@
 #include "EquipmentManagement/EquipActor/Inv_EquipActor.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
+#include "InventoryManagment/Components/Inv_ExternalInventoryComponent.h"
 #include "InventoryManagment/Components/Inv_InventoryComponent.h"
 #include "Items/Inv_InventoryItem.h"
 #include "InventoryManagment/Utils/Inv_InventoryStatics.h"
@@ -87,8 +88,27 @@ AInv_EquipActor* UInv_EquipmentComponent::FindEquippedActorByType(const FGamepla
 	return EquippedActors.FindByType(EquipmentType);
 }
 
+UInv_InventoryItem* UInv_EquipmentComponent::FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const
+{
+	for(const auto Item : EquipmentItemsList.GetAllItems())
+	{
+		if(Item->GetItemManifest().GetItemType().MatchesTag(ItemType))
+		{
+			return Item;
+		}
+		else if(const FInv_ContainerFragment* ContainerFragment = Item->GetFragmentStructByTag<FInv_ContainerFragment>(FragmentTags::ContainerFragment))
+		{
+			if(const auto SubItem = ContainerFragment->ContainerInventoryComponent->FindFirstItemByType_Implementation(ItemType))
+			{
+				return SubItem;
+			}
+		}
+	}
+	return IInv_ItemListInterface::FindFirstItemByType_Implementation(ItemType);
+}
+
 UInv_InventoryItem* UInv_EquipmentComponent::AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID,
-	const TArray<FInstancedStruct>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions)
+                                                                          const TArray<FInstancedStruct>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
 	return EquipmentItemsList.AddEntry(StaticItemManifestID, NewItemAddingOptions, DynamicFragments);
 }

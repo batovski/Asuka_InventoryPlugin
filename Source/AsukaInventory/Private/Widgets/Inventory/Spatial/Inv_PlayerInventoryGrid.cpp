@@ -24,8 +24,13 @@ void UInv_PlayerInventoryGrid::OnHide()
 	SizeBox_GridFrame->SetVisibility(ESlateVisibility::Hidden);
 }
 
+void UInv_PlayerInventoryGrid::OnVisible()
+{
+	SizeBox_GridFrame->SetVisibility(ESlateVisibility::Visible);
+}
+
 void UInv_PlayerInventoryGrid::CreateGrid(const TScriptInterface<IInv_ItemListInterface>& SourceInventory,
-	const int32 NewRows, const int32 NewColumns, const FText& NewGridName)
+                                          const int32 NewRows, const int32 NewColumns, const FText& NewGridName)
 {
 	Super::CreateGrid(SourceInventory, NewRows, NewColumns, GridName);
 }

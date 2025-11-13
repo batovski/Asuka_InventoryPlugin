@@ -62,6 +62,7 @@ public:
 	void ClearHoverItem() const;
 
 	virtual void OnHide();
+	virtual void OnVisible();
 
 	virtual TScriptInterface<IInv_ItemListInterface> GetGridInventoryInterface() const;
 	const FGameplayTag& GetOwningGridTag() const { return GridEntityTag; }

@@ -106,7 +106,7 @@ public:
 	AInv_EquipActor* FindEquippedActorByType(const FGameplayTag& EquipmentType);
 
 	// IInv_ItemListInterface interface:
-	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override { return EquipmentItemsList.FindFirstItemByType(ItemType); }
+	virtual UInv_InventoryItem* FindFirstItemByType_Implementation(const FGameplayTag& ItemType) const override;
 	virtual void RemoveItemFromList_Implementation(UInv_InventoryItem* Item) override { EquipmentItemsList.RemoveEntry(Item); }
 	virtual UInv_InventoryItem* AddItemToList_Implementation(const FPrimaryAssetId& StaticItemManifestID, const TArray<FInstancedStruct>& DynamicFragments, const FInv_ItemAddingOptions& NewItemAddingOptions) override;
 	virtual UInv_InventoryItem* MoveItemToList_Implementation(UInv_InventoryItem* Item) override { return EquipmentItemsList.AddEntry(Item); }

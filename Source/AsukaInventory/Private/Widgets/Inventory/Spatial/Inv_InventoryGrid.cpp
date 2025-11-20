@@ -295,7 +295,7 @@ bool UInv_InventoryGrid::CheckSlotConstraints(const UInv_GridSlot* GridSlot,
 	// Check if the item type matches:
 	if (!DoesItemTypeMatch(SubItem, ItemType)) return false;
 
-	if (GridSlot->GetStackCount() >= MaxStackSize) return false;
+	if (GetSlottedItemAtGridSlot(GridSlot->GetTileIndex())->GetStackCount() >= MaxStackSize) return false;
 
 	return true;
 }
@@ -309,11 +309,10 @@ int32 UInv_InventoryGrid::DetermineFillAmountForSlot(const bool bStackable, cons
 
 int32 UInv_InventoryGrid::GetStackAmount(const UInv_GridSlot* GridSlot) const
 {
-	int32 CurrentSlotStackCount = GridSlot->GetStackCount();
+	int32 CurrentSlotStackCount = GetSlottedItemAtGridSlot(GridSlot->GetTileIndex()) ? GetSlottedItemAtGridSlot(GridSlot->GetTileIndex())->GetStackCount() : 0;
 	if( const int32 UpperLeftIndex = GridSlot->GetUpperLeftIndex(); UpperLeftIndex != INDEX_NONE)
 	{
-		UInv_GridSlot* UpperLeftSlot = GridSlots[UpperLeftIndex];
-		CurrentSlotStackCount = UpperLeftSlot->GetStackCount();
+		CurrentSlotStackCount = GetSlottedItemAtGridSlot(UpperLeftIndex)->GetStackCount();
 	}
 	return CurrentSlotStackCount;
 }
@@ -336,7 +335,7 @@ bool UInv_InventoryGrid::AssignHoverItem(UInv_InventoryItem* InventoryItem, cons
 	AssignHoverItem(InventoryItem);
 
 	GetHoverItem()->SetPreviousGridIndex(PreviousGridIndex);
-	GetHoverItem()->UpdateStackCount(InventoryItem->IsStackable() ? GridSlots[GridIndex]->GetStackCount() : 0);
+	GetHoverItem()->UpdateStackCount(InventoryItem->IsStackable() ? GetSlottedItemAtGridSlot(GridIndex)->GetStackCount() : 0);
 	return true;
 
 }
@@ -349,7 +348,7 @@ void UInv_InventoryGrid::AddStacks(const FInv_SlotAvailabilityResult& Result)
 		{
 			const auto& GridSlot = GridSlots[Availability.Index];
 			const auto& SlottedItem = SlottedItems.FindChecked(Availability.Index);
-			SlottedItem->UpdateStackCount(GridSlot->GetStackCount() + Availability.AmountToFill);
+			SlottedItem->UpdateStackCount(GetSlottedItemAtGridSlot(Availability.Index)->GetStackCount() + Availability.AmountToFill);
 		}
 	}
 }
@@ -395,7 +394,6 @@ void UInv_InventoryGrid::RemoveItemFromGrid(const UInv_InventoryItem* Item, cons
 			GridSlot->SetUpperLeftIndex(INDEX_NONE);
 			GridSlot->SetUnoccupiedTexture();
 			GridSlot->SetAvailable(true);
-			GridSlot->SetStackCount(0);
 	});
 
 	if(SlottedItems.Contains(GridIndex) && SlottedItems[GridIndex].Get()->GetInventoryItem() == Item)
@@ -434,7 +432,6 @@ void UInv_InventoryGrid::RemoveAllItemFromGrid()
 		GridSlot->SetUpperLeftIndex(INDEX_NONE);
 		GridSlot->SetUnoccupiedTexture();
 		GridSlot->SetAvailable(true);
-		GridSlot->SetStackCount(0);
 	}
 	TArray<int32> Keys;
 	SlottedItems.GetKeys(Keys);
@@ -473,7 +470,7 @@ void UInv_InventoryGrid::OnSlottedItemClicked(int32 GridIndex, const FPointerEve
 	// Stack Item if possible
 	if(ClickedInventoryItem && IsSameStackable(ClickedInventoryItem))
 	{
-		const int32 ClickedStackCount = GridSlots[GridIndex]->GetStackCount();
+		const int32 ClickedStackCount = GetSlottedItemAtGridSlot(GridIndex)->GetStackCount();
 		const FInv_StackableFragment* StackableFragment = ClickedInventoryItem->GetFragmentStructByTag<FInv_StackableFragment>(FragmentTags::StackableFragment);
 		const int32 MaxStackSize = StackableFragment->GetMaxStackSize();
 		const int32 RoomInClickedSlot = MaxStackSize - ClickedStackCount;
@@ -776,7 +773,7 @@ void UInv_InventoryGrid::UpdateGridSlots(UInv_InventoryItem* NewItem, const int3
 
 	if(bStackableItem)
 	{
-		GridSlots[Index]->SetStackCount(StackAmount);
+		GetSlottedItemAtGridSlot(Index)->UpdateStackCount(StackAmount);
 	}
 
 	const FInv_GridFragment* GridFragment = NewItem->GetFragmentStructByTag<FInv_GridFragment>(FragmentTags::GridFragment);
@@ -949,12 +946,10 @@ void UInv_InventoryGrid::OnPopUpMenuSplit(int32 SplitAmount, int32 Index)
 	if(!ClickedInventoryItem->IsStackable()) return;
 
 	const int32 UpperLeftIndex = GridSlots[Index]->GetUpperLeftIndex();
-	UInv_GridSlot* UpperLeftSlot = GridSlots[UpperLeftIndex];
-	const int32 ClickedStackCount = UpperLeftSlot->GetStackCount();
+	const int32 ClickedStackCount = GetSlottedItemAtGridSlot(UpperLeftIndex)->GetStackCount();
 	const int32 NewStackCount = ClickedStackCount - SplitAmount;
 
-	UpperLeftSlot->SetStackCount(NewStackCount);
-	SlottedItems.FindChecked(UpperLeftIndex)->UpdateStackCount(NewStackCount);
+	GetSlottedItemAtGridSlot(UpperLeftIndex)->UpdateStackCount(NewStackCount);
 
 	AssignHoverItem(ClickedInventoryItem, UpperLeftIndex, UpperLeftIndex);
 	GetHoverItem()->UpdateStackCount(SplitAmount);
@@ -975,11 +970,9 @@ void UInv_InventoryGrid::OnPopUpMenuConsume(int32 Index)
 	if (!IsValid(ClickedInventoryItem)) return;
 
 	const int32 UpperLeftIndex = GridSlots[Index]->GetUpperLeftIndex();
-	UInv_GridSlot* UpperLeftGridSlot = GridSlots[UpperLeftIndex];
-	const int32 NewStackCount = UpperLeftGridSlot->GetStackCount() - 1;
+	const int32 NewStackCount = GetSlottedItemAtGridSlot(UpperLeftIndex)->GetStackCount() - 1;
 
-	UpperLeftGridSlot->SetStackCount(NewStackCount);
-	SlottedItems.FindChecked(UpperLeftIndex)->UpdateStackCount(NewStackCount);
+	GetSlottedItemAtGridSlot(UpperLeftIndex)->UpdateStackCount(NewStackCount);
 	const auto AuthorityInventory = UInv_InventoryStatics::GetInventoryComponent(GetOwningPlayer());
 	AuthorityInventory->Server_ConsumeItem(ClickedInventoryItem);
 }
@@ -1007,11 +1000,7 @@ bool UInv_InventoryGrid::ShouldSwapStackCounts(const int32 RoomInClickedSlot, co
 void UInv_InventoryGrid::SwapStackCounts(const int32 ClickedStackCount, const int32 HoveredStackCount,
 	const int32 GridIndex)
 {
-	UInv_GridSlot* GridSlot = GridSlots[GridIndex];
-	GridSlot->SetStackCount(HoveredStackCount);
-
-	UInv_SlottedItem* ClickedSlottedItem = SlottedItems.FindChecked(GridIndex);
-	ClickedSlottedItem->UpdateStackCount(HoveredStackCount);
+	GetSlottedItemAtGridSlot(GridIndex)->UpdateStackCount(HoveredStackCount);
 
 	GetHoverItem()->UpdateStackCount(ClickedStackCount);
 }
@@ -1033,8 +1022,7 @@ void UInv_InventoryGrid::ConsumeHoverItemStacks(const int32 ClickedStackCount, c
 	const int32 AmountToTransfer = HoveredStackCount;
 	const int32 NewClickedStackCount = ClickedStackCount + AmountToTransfer;
 
-	GridSlots[GridIndex]->SetStackCount(NewClickedStackCount);
-	SlottedItems.FindChecked(GridIndex)->UpdateStackCount(NewClickedStackCount);
+	GetSlottedItemAtGridSlot(GridIndex)->UpdateStackCount(NewClickedStackCount);
 
 	const FInv_GridFragment* GridFragment = GridSlots[GridIndex]->GetInventoryItem()->GetFragmentStructByTag<FInv_GridFragment>(FragmentTags::GridFragment);
 	const FIntPoint Dimensions = GridFragment ? GridFragment->GetGridSize() : FIntPoint(1, 1);
@@ -1054,12 +1042,8 @@ void UInv_InventoryGrid::ConsumeHoverItemStacks(const int32 ClickedStackCount, c
 
 void UInv_InventoryGrid::FillInStack(const int32 FillAmount, const int32 Remainder, const int32 GridIndex)
 {
-	UInv_GridSlot* GridSlot = GridSlots[GridIndex];
-	const int32 NewStackCount = GridSlot->GetStackCount() + FillAmount;
-
-	GridSlot->SetStackCount(NewStackCount);
-	UInv_SlottedItem* ClickedSlottedItem = SlottedItems.FindChecked(GridIndex);
-	ClickedSlottedItem->UpdateStackCount(NewStackCount);
+	const int32 NewStackCount = GetSlottedItemAtGridSlot(GridIndex)->GetStackCount() + FillAmount;
+	GetSlottedItemAtGridSlot(GridIndex)->UpdateStackCount(NewStackCount);
 
 	const auto InventoryInterface = GetGridInventoryInterface();
 	const auto HoverItemGridInterface = GetHoverItem()->GetOwningInventory();
@@ -1088,11 +1072,11 @@ void UInv_InventoryGrid::CreateItemPopUp(const int32 GridIndex)
 	CanvasSlot->SetPosition(MousePos - ItemPopUpOffset);
 	CanvasSlot->SetSize(ItemPopUp->GetBoxSize());
 
-	const int32 SliderMax = GridSlots[GridIndex]->GetStackCount() - 1;
+	const int32 SliderMax = GetSlottedItemAtGridSlot(GridIndex)->GetStackCount() - 1;
 	if(ClickedInventoryItem->IsStackable() && SliderMax > 0)
 	{
 		ItemPopUp->OnSplit.BindDynamic(this, &ThisClass::OnPopUpMenuSplit);
-		ItemPopUp->SetSliderParams(SliderMax, FMath::Max(1, GridSlots[GridIndex]->GetStackCount() / 2));
+		ItemPopUp->SetSliderParams(SliderMax, FMath::Max(1, GetSlottedItemAtGridSlot(GridIndex)->GetStackCount() / 2));
 	}
 	else
 	{
@@ -1140,6 +1124,15 @@ bool UInv_InventoryGrid::IsItemPresentedAsSlottedItem(const UInv_InventoryItem* 
 		}
 	}
 	return false;
+}
+
+UInv_SlottedItem* UInv_InventoryGrid::GetSlottedItemAtGridSlot(const int32 GridSlotIndex) const
+{
+	if (SlottedItems.Contains(GridSlotIndex) && SlottedItems[GridSlotIndex].Get()->GetInventoryItem())
+	{
+		return SlottedItems[GridSlotIndex].Get();
+	}
+	return nullptr;
 }
 
 UInv_SlottedItem* UInv_InventoryGrid::FindSlottedItem(const UInv_InventoryItem* Item) const

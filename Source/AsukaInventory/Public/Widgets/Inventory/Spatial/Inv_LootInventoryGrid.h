@@ -18,8 +18,6 @@ class ASUKAINVENTORY_API UInv_LootInventoryGrid : public UInv_InventoryGrid
 public:
 	virtual void NativeOnInitialized() override;
 
-	virtual void AddItem(UInv_InventoryItem* Item) override;
-
 protected:
 	virtual void OnInventoryMenuToggled(const bool IsOpen) override;
 

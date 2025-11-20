@@ -170,6 +170,7 @@ private:
 	void CreateItemPopUpGrid(const int32 GridIndex);
 
 	bool IsItemPresentedAsSlottedItem(const UInv_InventoryItem* Item) const;
+	UInv_SlottedItem* GetSlottedItemAtGridSlot(const int32 GridSlotIndex) const;
 
 	UFUNCTION()
 	void OnSlottedItemClicked(int32 GridIndex, const FPointerEvent& MouseEvent);

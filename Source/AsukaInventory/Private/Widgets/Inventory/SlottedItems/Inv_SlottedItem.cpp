@@ -71,17 +71,18 @@ void UInv_SlottedItem::SetImageBrush(const FSlateBrush& InBrush) const
 	}
 }
 
-void UInv_SlottedItem::UpdateStackCount(int32 StackCount) const
+void UInv_SlottedItem::UpdateStackCount(int32 NewStackCount)
 {
-	if(StackCount > 0)
+	if(NewStackCount > 0)
 	{
 		Text_StackCount->SetVisibility(ESlateVisibility::Visible);
-		Text_StackCount->SetText(FText::AsNumber(StackCount));
+		Text_StackCount->SetText(FText::AsNumber(NewStackCount));
 	}
 	else
 	{
 		Text_StackCount->SetVisibility(ESlateVisibility::Collapsed);
 	}
+	StackCount = NewStackCount;
 }
 
 void UInv_SlottedItem::OnItemFragmentModified(const FGameplayTag& FragmentTag)

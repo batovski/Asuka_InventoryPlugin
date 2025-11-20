@@ -38,7 +38,8 @@ public:
 
 	void SetImageBrush(const FSlateBrush& InBrush) const;
 
-	void UpdateStackCount(int32 StackCount) const;
+	void UpdateStackCount(int32 StackCount);
+	int32 GetStackCount() const { return StackCount; }
 
 	UFUNCTION()
 	void OnItemFragmentModified(const FGameplayTag& FragmentTag);
@@ -55,7 +56,8 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Inventory")
 	float DoubleClickTreshold{ 0.2f };
 
-	int32 GridIndex;
+	int32 GridIndex{ -1 };
+	int32 StackCount{ 0 };
 	FIntPoint GridDimensions;
 	TWeakObjectPtr<UInv_InventoryItem> InventoryItem;
 	bool bIsStackable{ false };

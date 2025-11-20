@@ -92,6 +92,11 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(UInv_ExternalInventoryComp
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, ExternalComponent, DynamicFragments);
 	NewEntry.Item->SetItemIndex(NewItemAddingOptions.GridIndex);
+	if (FInv_StackableFragment* StackableFragment = NewEntry.Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
+	{
+		if (NewItemAddingOptions.StackCount != -1)
+			StackableFragment->SetStackCount(NewItemAddingOptions.StackCount);
+	}
 	ExternalComponent->AddRepSubObj(NewEntry.Item);
 
 	MarkItemDirty(NewEntry);
@@ -109,6 +114,11 @@ UInv_InventoryItem* FInv_InventoryFastArray::AddEntry(const FPrimaryAssetId& Sta
 	FInv_InventoryEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.Item = UInv_InventoryStatics::CreateInventoryItemFromManifest(StaticItemManifestID, OwnerComponent, DynamicFragments);
 	NewEntry.Item->SetItemIndex(NewItemAddingOptions.GridIndex);
+	if(FInv_StackableFragment* StackableFragment = NewEntry.Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
+	{
+		if(NewItemAddingOptions.StackCount != -1)
+			StackableFragment->SetStackCount(NewItemAddingOptions.StackCount);
+	}
 	IC->AddRepSubObj(NewEntry.Item);
 	MarkItemDirty(NewEntry);
 

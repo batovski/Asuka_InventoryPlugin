@@ -58,12 +58,7 @@ void UInv_InventoryComponent::TryAddItemByComponent(UInv_ItemComponent* ItemComp
 void UInv_InventoryComponent::Server_AddNewItemByItem_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, UInv_InventoryItem* Item,
 	const FInv_ItemAddingOptions& NewItemAddingOptions)
 {
-	UInv_InventoryItem* NewItem = Execute_AddItemToList(SourceInventory.GetObject(), Item->GetStaticItemManifestAssetId(), Item->GetDynamicItemFragments(), NewItemAddingOptions);
-	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
-	{
-		StackFragment->SetStackCount(NewItemAddingOptions.StackCount);
-		Item->MarkDynamicFragmentDirty(StackFragment);
-	}
+	Execute_AddItemToList(SourceInventory.GetObject(), Item->GetStaticItemManifestAssetId(), Item->GetDynamicItemFragments(), NewItemAddingOptions);
 }
 
 void UInv_InventoryComponent::Server_AddStacksToItem_Implementation(const TScriptInterface<IInv_ItemListInterface>& SourceInventory, const TScriptInterface <IInv_ItemListInterface>& TargetInventory, UInv_InventoryItem* Item, int32 StackCount, int32 Remainder)
@@ -121,13 +116,7 @@ void UInv_InventoryComponent::Server_AddNewItemByComponent_Implementation(UInv_I
 	NewItemAddingOptions.StackCount = StackCount;
 	NewItemAddingOptions.GridIndex = -1;
 
-	UInv_InventoryItem* NewItem = Execute_AddItemToList(SourceInventory.GetObject(), ItemComponent->GetStaticItemManifestID(), ItemComponent->GetDynamicFragments(), NewItemAddingOptions);
-	if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
-	{
-		StackFragment->SetStackCount(StackCount);
-		NewItem->MarkDynamicFragmentDirty(StackFragment);
-	}
-
+	Execute_AddItemToList(SourceInventory.GetObject(), ItemComponent->GetStaticItemManifestID(), ItemComponent->GetDynamicFragments(), NewItemAddingOptions);
 	ItemComponent->PickedUp();
 }
 
@@ -142,12 +131,7 @@ void UInv_InventoryComponent::Server_AddNewItem_Implementation(const TScriptInte
 	else
 	{
 
-		UInv_InventoryItem* NewItem = Execute_AddItemToList(TargetInventory.GetObject(), Item->GetStaticItemManifestAssetId(), Item->GetDynamicItemFragments(), NewItemAddingOptions);
-		if (FInv_StackableFragment* StackFragment = NewItem->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
-		{
-			StackFragment->SetStackCount(NewItemAddingOptions.StackCount);
-			Item->MarkDynamicFragmentDirty(StackFragment);
-		}
+		Execute_AddItemToList(TargetInventory.GetObject(), Item->GetStaticItemManifestAssetId(), Item->GetDynamicItemFragments(), NewItemAddingOptions);
 
 		if (FInv_StackableFragment* OldItemStackFragment = Item->GetFragmentStructByTagMutable<FInv_StackableFragment>(FragmentTags::StackableFragment))
 		{
